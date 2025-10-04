@@ -40,8 +40,9 @@ std::vector<std::byte> bits_permutation(std::vector<std::byte>& msg, const std::
         }
     } else {
         for (size_t i = 0; i < bits_number; ++i) {
-            auto& b = permutation[(bits_number - IP[i]) / 8];
-            set_younger_bit(b, i % 8,
+            auto& b = permutation[i / 8];
+            std::cout << permutation[0] << ' ' << permutation[1] << std::endl;
+            set_younger_bit(b, 7 - i % 8 ,
                            get_younger_bit(msg[(bits_number - IP[i]) / 8], IP[i] % 8 - 1));
         }
     }
@@ -57,13 +58,8 @@ int main() {
 
     std::cout << msg[0] << ' ' << msg[1] << std::endl;
 
-    for (int i = 0; i < 8; ++i) {
-        std::cout << get_younger_bit(msg[0], i) << ' ';
-    }
-    std::cout << std::endl;
-
     std::vector<unsigned int> IP = {15, 14, 2, 7, 6, 1, 3, 10, 11, 9, 4, 5, 8, 13, 12, 16};
-    bool rule = true, bit_number = true;
+    bool rule = false, bit_number = true;
 
     auto P = bits_permutation(msg, IP, rule, bit_number);
     std::cout << P[0] << ' ' << P[1];
