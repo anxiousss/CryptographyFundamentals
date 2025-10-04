@@ -31,15 +31,18 @@ std::vector<std::byte> bits_permutation(std::vector<std::byte>& msg, const std::
     // если starting_bit_number = true, то вычитаем везде 1 из позиции
     size_t n_msg = msg.size();
     size_t bits_number = n_msg * 8;
-    std::vector<std::byte> permutation{n_msg};
-    // void (*set_bit)(std::byte& b, int n, bool value);
+    std::vector<std::byte> permutation{n_msg, std::byte{0}} ;
     if (indexing_rule) {
-        // set_bit = set_eldest_bit;
         for (size_t i = 0; i < bits_number; ++i) {
-            // permutation[IP[i] % n_msg][i] = msg[i % n_msg][IP[i]]
-            auto b = permutation[IP[i] % n_msg];
-            set_eldest_bit(b, i % n_msg - staring_bit_number,
-                           get_eldest_bit(msg[i % n_msg], IP[i] % n_msg - staring_bit_number));
+            auto& b = permutation[i / 8];
+            set_eldest_bit(b, i % 8,
+                           get_eldest_bit(msg[IP[i] / 8], (IP[i] % 8) - staring_bit_number));
+        }
+    } else {
+        for (size_t i = 0; i < bits_number; ++i) {
+            auto& b = permutation[(bits_number - IP[i]) / 8];
+            set_younger_bit(b, i % 8,
+                           get_younger_bit(msg[(bits_number - IP[i]) / 8], IP[i] % 8 - 1));
         }
     }
 
@@ -47,13 +50,19 @@ std::vector<std::byte> bits_permutation(std::vector<std::byte>& msg, const std::
 }
 
 
-
 int main() {
     std::vector<std::byte> msg(2);
     msg[0] = std::byte{10};
-    msg[1] = std::byte{12};
+    msg[1] = std::byte{14};
+
     std::cout << msg[0] << ' ' << msg[1] << std::endl;
-    const std::vector<unsigned int> IP = {15, 14, 2, 7, 6, 9, 1, 3, 10, 11, 9, 4, 5, 8, 13, 12, 16};
+
+    for (int i = 0; i < 8; ++i) {
+        std::cout << get_younger_bit(msg[0], i) << ' ';
+    }
+    std::cout << std::endl;
+
+    std::vector<unsigned int> IP = {15, 14, 2, 7, 6, 1, 3, 10, 11, 9, 4, 5, 8, 13, 12, 16};
     bool rule = true, bit_number = true;
 
     auto P = bits_permutation(msg, IP, rule, bit_number);
