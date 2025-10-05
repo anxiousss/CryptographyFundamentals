@@ -26,26 +26,27 @@ void set_younger_bit(std::byte& b, size_t n, bool value) {
 }
 
 std::vector<std::byte> bits_permutation(std::vector<std::byte> msg, const std::vector<unsigned int>& IP,
-                        bool indexing_rule, bool staring_bit_number) {
+                                        bool indexing_rule, bool staring_bit_number) {
 
     size_t n_msg = msg.size();
     size_t bits_number = n_msg * 8;
-    std::vector<std::byte> permutation{n_msg, std::byte{0}};
+    std::vector<std::byte> permutation(n_msg, std::byte{0});
+
     for (int i = 0; i < bits_number; ++i) {
         auto& b = permutation[i / 8];
         if (indexing_rule) {
-            auto value = get_eldest_bit(msg[IP[i] / 8], (IP[i] % 8) - staring_bit_number);
+            unsigned int bit_pos = (IP[i] % 8) - (staring_bit_number ? 1 : 0);
+            auto value = get_eldest_bit(msg[IP[i] / 8], bit_pos);
             set_eldest_bit(b, i % 8, value);
         } else {
-            // std::cout << permutation[0] << ' '  << permutation[1] << std::endl;
-            auto value = get_younger_bit(msg[(bits_number - IP[i]) / 8], IP[i] % 8 - staring_bit_number);
-            set_younger_bit(b, 7 - i % 8, value);
+            unsigned int bit_pos = (IP[i] % 8) - (staring_bit_number ? 1 : 0);
+            auto value = get_younger_bit(msg[IP[i] / 8], bit_pos);
+            set_younger_bit(b, i % 8, value);
         }
     }
 
     return permutation;
 }
-
 
 int main() {
     std::vector<std::byte> msg(2);
