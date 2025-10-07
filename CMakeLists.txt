@@ -4,4 +4,3 @@ project(CryptographyFundamentals)
 set(CMAKE_CXX_STANDARD 20)
 
 add_executable(lab1t1 "lab 1/ex1.cpp")
-add_executable(lab1t2 "lab 1/ex2.cpp")
