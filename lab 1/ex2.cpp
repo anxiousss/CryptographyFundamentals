@@ -10,6 +10,14 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <iostream>
+#include <bitset>
+
+std::ostream& operator<<(std::ostream& os, std::byte b)
+{
+    return os << std::bitset<8>(std::to_integer<int>(b));
+}
+
 
 enum class EncryptionModes {
     ECB = 0,
@@ -42,54 +50,6 @@ public:
 };
 
 
-class PaddingStrategy {
-public:
-    virtual ~PaddingStrategy() = default;
-    virtual std::vector<std::byte> add_padding(const std::vector<std::byte>& data, size_t block_size) = 0;
-    virtual std::vector<std::byte> remove_padding(const std::vector<std::byte>& data, size_t block_size) = 0;
-};
-
-class ZerosPadding : public PaddingStrategy {
-public:
-    std::vector<std::byte> add_padding(const std::vector<std::byte>& data, size_t block_size) override;
-    std::vector<std::byte> remove_padding(const std::vector<std::byte>& data, size_t block_size) override;
-};
-
-class ANSIX923Padding : public PaddingStrategy {
-public:
-    std::vector<std::byte> add_padding(const std::vector<std::byte>& data, size_t block_size) override {
-        std::vector<std::byte> padding_data(data);
-
-        size_t current_size = padding_data.size();
-        size_t remainder = current_size % block_size;
-
-        if (remainder == 0) {
-            std::vector<std::byte> full_block_padding(block_size, std::byte{0});
-            full_block_padding[block_size - 1] = static_cast<std::byte>(block_size);
-            padding_data.insert(padding_data.end(), full_block_padding.begin(), full_block_padding.end());
-        } else {
-            size_t n_bytes_to_add = block_size - remainder;
-            padding_data.insert(padding_data.end(), n_bytes_to_add - 1, std::byte{0});
-            padding_data.push_back(static_cast<std::byte>(n_bytes_to_add));
-        };
-        return padding_data;
-    }
-    std::vector<std::byte> remove_padding(const std::vector<std::byte>& data, size_t block_size) override;
-};
-
-class PKCS7Padding : public PaddingStrategy {
-public:
-    std::vector<std::byte> add_padding(const std::vector<std::byte>& data, size_t block_size) override;
-    std::vector<std::byte> remove_padding(const std::vector<std::byte>& data, size_t block_size) override;
-};
-
-class ISO10126Padding : public PaddingStrategy {
-public:
-    std::vector<std::byte> add_padding(const std::vector<std::byte>& data, size_t block_size) override;
-    std::vector<std::byte> remove_padding(const std::vector<std::byte>& data, size_t block_size) override;
-};
-
-
 class SymmetricEncryption {
 public:
     virtual ~SymmetricEncryption() = default;
@@ -117,13 +77,50 @@ public:
                        key(std::move(key_)), encryption_mode(encryption_mode_), padding_mode(padding_mode_),
                        init_vector(std::move(init_vector_)), params(std::move(params_)), algorithm(std::move(algorithm_)) {};
 
-    virtual ~SymmetricAlgorithm() = default;
+    ~SymmetricAlgorithm() = default;
 
-    // Методы для шифрования
-    virtual std::future<std::vector<std::byte>> encrypt(const std::vector<std::byte>& data) = 0;
-    virtual std::future<void> encrypt(const std::filesystem::path& input_file, const std::filesystem::path& output_file) = 0;
+    std::future<std::vector<std::byte>> encrypt(const std::vector<std::byte>& data);
+    std::future<void> encrypt(const std::filesystem::path& input_file, const std::filesystem::path& output_file);
 
-    // Методы для дешифрования
-    virtual std::future<std::vector<std::byte>> decrypt(const std::vector<std::byte>& data) = 0;
-    virtual std::future<void> decrypt(const std::filesystem::path& input_file, const std::filesystem::path& output_file) = 0;
+    std::future<std::vector<std::byte>> decrypt(const std::vector<std::byte>& data);
+    std::future<void> decrypt(const std::filesystem::path& input_file, const std::filesystem::path& output_file);
+
+private:
+    std::vector<std::byte> ECB(const std::vector<std::byte>& data, bool encrypt);
+    std::vector<std::byte> CBC(const std::vector<std::byte>& data, bool encrypt);
+    std::vector<std::byte> PCBC(const std::vector<std::byte>& data, bool encrypt);
+    std::vector<std::byte> CFB(const std::vector<std::byte>& data, bool encrypt);
+    std::vector<std::byte> OFB(const std::vector<std::byte>& data, bool encrypt);
+    std::vector<std::byte> CTR(const std::vector<std::byte>& data, bool encrypt);
+    std::vector<std::byte> RandomDelta(const std::vector<std::byte>& data, bool encrypt);
+
+public:
+    void padding(std::vector<std::byte>& data, size_t n_bytes) {
+        size_t prev_size = data.size();
+        data.resize(n_bytes);
+        switch (this->padding_mode) {
+            case PaddingModes::Zeros:
+                break;
+            case PaddingModes::ANSIX_923:
+                data.at(data.size() - 1) = static_cast<std::byte>(n_bytes - prev_size);
+                break;
+            case PaddingModes::PKCS7:
+                break;
+            case PaddingModes::ISO_10126:
+                break;
+        }
+    }
+
 };
+
+int main() {
+    SymmetricAlgorithm s{{}, EncryptionModes::CBC, PaddingModes::ANSIX_923};
+    std::vector<std::byte> msg(2);
+    msg[0] = std::byte{10};
+    msg[1] = std::byte{14};
+    s.padding(msg, 16);
+    std::cout << msg.size() << std::endl;
+    for (auto & i : msg) {
+        std::cout << i << std::endl;
+    }
+}
