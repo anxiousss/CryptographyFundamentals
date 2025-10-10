@@ -8,6 +8,7 @@
 #include <thread>
 #include <mutex>
 #include <iostream>
+#include <cassert>
 
 #include "utility.hpp"
 
@@ -126,47 +127,132 @@ public:
     }
 
     std::vector<std::byte> CBC(std::vector<std::byte>& data, bool encrypt) {
+        if (!init_vector.has_value()) {
+            throw std::runtime_error("Initialization vector is required for CBC mode");
+        }
+
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data = data;
 
         if (encrypt) {
-            padding(new_data, data.size() / block_size);
+            size_t required_blocks = (data.size() + block_size - 1) / block_size;
+            padding(new_data, required_blocks * block_size);
         }
 
-        if (this->init_vector.value().size() < block_size) {
-            this->init_vector.value().resize(block_size);
+        auto& iv = init_vector.value();
+
+        if (iv.size() < block_size) {
+            iv.resize(block_size);
         }
 
-        std::vector<std::byte> block = std::vector<std::byte>(new_data.begin(), new_data.begin() + block_size);
-        if (encrypt) {
-            std::vector<std::byte> processed_block = xor_vectors(this->init_vector.value(), block, block_size);
-            processed_block = this->algorithm->encrypt(processed_block);
-            std::copy(processed_block.begin(), processed_block.end(), new_data.begin());
-            for (size_t i = block_size; i < new_data.size(); i += block_size) {
-                block.assign(new_data.begin() + i, new_data.begin() + std::min(i + block_size, new_data.size()));
-                processed_block = xor_vectors(block, processed_block, block_size);
-                processed_block = this->algorithm->encrypt(processed_block);
-                std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
+        std::vector<std::byte> previous_block = iv;
 
+        for (size_t i = 0; i < new_data.size(); i += block_size) {
+            std::vector<std::byte> current_block(
+                    new_data.begin() + i,
+                    new_data.begin() + std::min(i + block_size, new_data.size())
+            );
+
+            std::vector<std::byte> processed_block;
+
+            if (encrypt) {
+                auto xored_block = xor_vectors(current_block, previous_block, block_size);
+                processed_block = this->algorithm->encrypt(xored_block);
+            } else {
+                auto decrypted_block = this->algorithm->decrypt(current_block);
+                processed_block = xor_vectors(decrypted_block, previous_block, block_size);
             }
-        } else {
-            std::vector<std::byte> processed_block = this->algorithm->decrypt(block);
-            processed_block = xor_vectors(processed_block, this->init_vector.value(), block_size);
-            std::copy(processed_block.begin(), processed_block.end(), new_data.begin());
-            auto prev_block = block;
-            for (size_t i = block_size;  i < new_data.size(); i += block_size) {
-                block.assign(new_data.begin() + i, new_data.begin() + std::min(i + block_size, new_data.size()));
-                processed_block = this->algorithm->decrypt(block);
-                processed_block = xor_vectors(processed_block, prev_block, block_size);
-                std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
-                prev_block = block;
+
+            std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
+
+            if (encrypt) {
+                previous_block = processed_block;
+            } else {
+                previous_block = current_block;
             }
         }
 
         return new_data;
     }
-    std::vector<std::byte> PCBC(const std::vector<std::byte>& data, bool encrypt);
-    std::vector<std::byte> CFB(const std::vector<std::byte>& data, bool encrypt);
+    std::vector<std::byte> PCBC(const std::vector<std::byte>& data, bool encrypt) {
+        if (!init_vector.has_value()) {
+            throw std::runtime_error("Initialization vector is required for CBC mode");
+        }
+        auto block_size = this->algorithm->get_block_size();
+        std::vector<std::byte> new_data = data;
+
+        if (encrypt) {
+            size_t required_blocks = (data.size() + block_size - 1) / block_size;
+            padding(new_data, required_blocks * block_size);
+        }
+
+        auto& iv = init_vector.value();
+
+        if (iv.size() < block_size) {
+            iv.resize(block_size);
+        }
+
+        std::vector<std::byte> feedback = iv;
+
+        for (size_t i = 0; i < new_data.size(); i += block_size) {
+            std::vector<std::byte> block(
+                    new_data.begin() + i,
+                    new_data.begin() + std::min(i + block_size, new_data.size())
+            );
+            if (encrypt) {
+                auto xor_block = xor_vectors(feedback, block, block_size);
+                xor_block = this->algorithm->encrypt(xor_block);
+                std::copy(xor_block.begin(), xor_block.end(), new_data.begin() + i);
+                feedback = xor_vectors(block, xor_block, block_size);
+            } else {
+                auto encrypted_block = this->algorithm->decrypt(block);
+                feedback = xor_vectors( feedback, encrypted_block, block_size);
+                std::copy(feedback.begin(), feedback.end(), new_data.begin() + i);
+                feedback = xor_vectors(block, feedback, block_size);
+            }
+        }
+
+        return new_data;
+    }
+
+    std::vector<std::byte> CFB(const std::vector<std::byte>& data, bool encrypt) {
+        if (!init_vector.has_value()) {
+            throw std::runtime_error("Initialization vector is required for CBC mode");
+        }
+        auto block_size = this->algorithm->get_block_size();
+        std::vector<std::byte> new_data = data;
+
+        if (encrypt) {
+            size_t required_blocks = (data.size() + block_size - 1) / block_size;
+            padding(new_data, required_blocks * block_size);
+        }
+
+        auto& iv = init_vector.value();
+
+        if (iv.size() < block_size) {
+            iv.resize(block_size);
+        }
+
+        std::vector<std::byte> feedback = iv;
+
+        for (size_t i = 0; i < new_data.size(); i += block_size) {
+            auto encrypted_block = this->algorithm->encrypt(feedback);
+            std::vector<std::byte> block(
+                    new_data.begin() + i,
+                    new_data.begin() + std::min(i + block_size, new_data.size())
+            );
+            if (encrypt) {
+                feedback = xor_vectors(block, encrypted_block, block_size);
+                std::copy(feedback.begin(), feedback.end(), new_data.begin() + i);
+            } else {
+                auto text = xor_vectors(encrypted_block, block, block_size);
+                std::copy(text.begin(), text.end(), new_data.begin() + i);
+                feedback = block;
+            }
+        }
+
+        return new_data;
+    }
     std::vector<std::byte> OFB(const std::vector<std::byte>& data, bool encrypt);
     std::vector<std::byte> CTR(const std::vector<std::byte>& data, bool encrypt);
     std::vector<std::byte> RandomDelta(const std::vector<std::byte>& data, bool encrypt);
@@ -176,7 +262,7 @@ public:
         data.resize(n_bytes);
         switch (this->padding_mode) {
             case PaddingModes::Zeros:
-                for (int i = prev_size; i < data.size(); ++i) {
+                for (size_t i = prev_size; i < data.size(); ++i) {
                     data[i] = static_cast<std::byte>(0);
                 }
                 break;
@@ -184,12 +270,12 @@ public:
                 data.at(data.size() - 1) = static_cast<std::byte>(n_bytes - prev_size);
                 break;
             case PaddingModes::PKCS7:
-                for (int i = prev_size; i < data.size(); ++i) {
+                for (size_t i = prev_size; i < data.size(); ++i) {
                     data[i] = static_cast<std::byte>(n_bytes - prev_size);
                 }
                 break;
             case PaddingModes::ISO_10126:
-                for (int i = prev_size; i < data.size() - 1; ++i) {
+                for (size_t i = prev_size; i < data.size() - 1; ++i) {
                     auto value = std::rand() % 256;
                     data[i] = static_cast<std::byte>(value);
                 }
@@ -200,14 +286,7 @@ public:
 };
 
 int main() {
-    TestEncyption test{};
-    SymmetricAlgorithm s{{}, EncryptionModes::ECB, PaddingModes::Zeros,
-                         std::nullopt, {}, std::make_unique<TestEncyption>(test)};
-    std::vector<std::byte> msg(2);
-    msg[0] = std::byte{10};
-    msg[1] = std::byte{8};
-    auto new_msg = s.ECB(msg, 1);
-    for (auto m: new_msg) {
-        std::cout << m << std::endl;
-    }
+
+
+    return 0;
 }
