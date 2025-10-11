@@ -262,9 +262,6 @@ public:
         data.resize(n_bytes);
         switch (this->padding_mode) {
             case PaddingModes::Zeros:
-                for (size_t i = prev_size; i < data.size(); ++i) {
-                    data[i] = static_cast<std::byte>(0);
-                }
                 break;
             case PaddingModes::ANSIX_923:
                 data.at(data.size() - 1) = static_cast<std::byte>(n_bytes - prev_size);
