@@ -10,7 +10,7 @@
 #include <iostream>
 #include <cassert>
 
-#include "utility.hpp"
+#include "bits_functions.hpp"
 
 enum class EncryptionModes {
     ECB = 0,
