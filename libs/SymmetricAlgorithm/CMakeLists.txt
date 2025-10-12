@@ -1,0 +1,3 @@
+add_library(symmetric_algorithm src/symmetric_algorithm.cpp)
+target_link_libraries(symmetric_algorithm PRIVATE bits_functions)
+target_include_directories(symmetric_algorithm PUBLIC include)

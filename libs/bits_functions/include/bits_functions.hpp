@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstddef>
 #include <vector>
+#include <cstdint>
 
 namespace bits_functions {
     enum class PermutationRule {
@@ -28,6 +29,7 @@ namespace bits_functions {
     std::vector<std::byte> bits_permutation(const std::vector<std::byte> &msg, const std::vector<unsigned int> &IP,
                                             PermutationRule rule);
 
+    std::vector<std::byte> add_number_to_bytes(const std::vector<std::byte>& data, uint64_t& number);
 }
 
 std::ostream &operator<<(std::ostream &os, std::byte b);
