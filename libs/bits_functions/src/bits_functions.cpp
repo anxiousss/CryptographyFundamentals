@@ -84,6 +84,24 @@ namespace bits_functions {
         return result;
     }
 
+    std::vector<std::byte> add_byte_vectors(const std::vector<std::byte>& vec1, const std::vector<std::byte>& vec2) {
+        if (vec1.size() != vec2.size()) {
+            throw std::invalid_argument("Vectors must have the same size");
+        }
+
+        std::vector<std::byte> result;
+        result.reserve(vec1.size());
+
+        for (size_t i = 0; i < vec1.size(); ++i) {
+            uint8_t byte1 = static_cast<uint8_t>(vec1[i]);
+            uint8_t byte2 = static_cast<uint8_t>(vec2[i]);
+            uint8_t sum = static_cast<uint8_t>((byte1 + byte2) % 256);
+            result.push_back(static_cast<std::byte>(sum));
+        }
+
+        return result;
+    }
+
 }
 
 std::ostream &operator<<(std::ostream &os, std::byte b) {

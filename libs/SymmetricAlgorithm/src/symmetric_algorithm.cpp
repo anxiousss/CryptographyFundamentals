@@ -354,7 +354,49 @@ namespace symmerical_algorithm {
     }
 
     std::vector<std::byte> SymmetricAlgorithm::RandomDelta(const std::vector<std::byte>& data, bool encrypt) {
-        return data;
+        if (!init_vector.has_value()) {
+            throw std::runtime_error("Initialization vector is required for CTR mode");
+        }
+
+        auto block_size = this->algorithm->get_block_size();
+        std::vector<std::byte> new_data = data;
+
+        if (encrypt) {
+            size_t required_blocks = (data.size() + block_size - 1) / block_size;
+            padding(new_data, required_blocks * block_size);
+        }
+
+        auto& iv = init_vector.value();
+        if (iv.size() < block_size) {
+            iv.assign(iv.begin(), iv.begin() + iv.size() / 2);
+            iv.resize(block_size);
+        }
+
+        std::vector<std::byte> random_delta(iv.begin() + iv.size() / 2 + 1, iv.end());
+        random_delta.resize(block_size);
+        std::vector<std::thread> threads;
+
+
+        for (size_t i = 0; i < new_data.size(); i += block_size) {
+            threads.emplace_back([this, &new_data, &iv, block_size, i, random_delta]() {
+                std::vector<std::byte> block(
+                        new_data.begin() + i,
+                        new_data.begin() + std::min(i + block_size, new_data.size())
+                );
+
+                iv = bits_functions::add_byte_vectors(iv, random_delta);
+                auto xor_block = bits_functions::xor_vectors(iv, block, block_size);
+                auto processed_block = this->algorithm->encrypt(xor_block);
+
+                std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
+            });
+        }
+
+        for (auto& t : threads) {
+            t.join();
+        }
+
+        return new_data;
     }
 
     void SymmetricAlgorithm::padding(std::vector<std::byte>& data, size_t n_bytes) {
