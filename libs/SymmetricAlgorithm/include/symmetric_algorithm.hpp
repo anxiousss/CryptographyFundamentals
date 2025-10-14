@@ -47,6 +47,7 @@ namespace symmerical_algorithm {
     class SymmetricEncryption {
     public:
         virtual ~SymmetricEncryption() = default;
+        virtual void set_key(const std::vector<std::byte>& key) = 0;
         virtual std::vector<std::byte> encrypt(const std::vector<std::byte>& block) = 0;
         virtual std::vector<std::byte> decrypt(const std::vector<std::byte>& block) = 0;
         virtual size_t get_block_size() = 0;
@@ -54,6 +55,7 @@ namespace symmerical_algorithm {
 
     class TestEncyption: public SymmetricEncryption {
     public:
+        void set_key(const std::vector<std::byte>& key) override;
         std::vector<std::byte> encrypt(const std::vector<std::byte>& block) override;
         std::vector<std::byte> decrypt(const std::vector<std::byte>& block) override;
         size_t get_block_size() override;
@@ -96,6 +98,8 @@ namespace symmerical_algorithm {
         std::vector<std::byte> RandomDelta(const std::vector<std::byte>& data, bool encrypt);
 
         void padding(std::vector<std::byte>& data, size_t n_bytes);
+
+        void remove_padding(std::vector<std::byte>& data);
     };
 
 } // namespace Crypto
