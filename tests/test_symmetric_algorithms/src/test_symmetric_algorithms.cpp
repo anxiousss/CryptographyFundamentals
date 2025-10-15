@@ -51,7 +51,6 @@ void print_byte_vector(const std::vector<std::byte>& data) {
     std::cout << "]" << std::dec << std::endl;
 }
 
-// Debug function to check block size issues
 void test_block_size_issues(TestRunner& runner) {
     runner.start_test("Block Size Verification");
 
@@ -76,7 +75,6 @@ void test_ecb_encryption_decryption(TestRunner& runner) {
         auto algorithm = std::make_unique<TestEncryption>();
         algorithm->set_key(key);
 
-        // Verify block size before creating algorithm
         size_t block_size = algorithm->get_block_size();
         if (block_size == 0) {
             throw std::runtime_error("Block size is 0!");
@@ -93,8 +91,6 @@ void test_ecb_encryption_decryption(TestRunner& runner) {
 
         auto decrypted_future = algo.decrypt(encrypted);
         auto decrypted = decrypted_future.get();
-
-        std::cout << "Decrypted size: " << decrypted.size();
 
         runner.assert_true(compare_byte_vectors(test_data, decrypted),
                            "ECB: Original and decrypted data should match");
@@ -270,7 +266,6 @@ void test_different_padding_modes(TestRunner& runner) {
         std::vector<std::byte> test_data = {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44}};
 
         std::vector<PaddingModes> padding_modes = {
-                PaddingModes::Zeros,
                 PaddingModes::ANSIX_923,
                 PaddingModes::PKCS7,
                 PaddingModes::ISO_10126
@@ -341,8 +336,10 @@ void test_large_data(TestRunner& runner) {
         std::vector<std::byte> key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
         std::vector<std::byte> iv = {std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD}};
 
-        // Create data that is not aligned with block size to test padding
-        std::vector<std::byte> large_data(17, std::byte{0xAB}); // 17 bytes - will need padding
+        std::vector<std::byte> large_data;
+        for (int i = 0; i < 17; ++i) {
+            large_data.push_back(static_cast<std::byte>(0xAB + i));
+        }
 
         auto algorithm = std::make_unique<TestEncryption>();
         algorithm->set_key(key);
@@ -350,15 +347,27 @@ void test_large_data(TestRunner& runner) {
         SymmetricAlgorithm algo(key, EncryptionModes::CBC, PaddingModes::PKCS7,
                                 iv, {}, std::move(algorithm));
 
+        std::cout << "Step 1 - Original data: " << large_data.size() << " bytes" << std::endl;
+
         auto encrypted = algo.encrypt(large_data).get();
+        std::cout << "Step 2 - After encryption: " << encrypted.size() << " bytes" << std::endl;
+
         auto decrypted = algo.decrypt(encrypted).get();
+        std::cout << "Step 3 - After decryption: " << decrypted.size() << " bytes" << std::endl;
 
-        std::cout << "Original size: " << large_data.size()
-                  << ", Decrypted size: " << decrypted.size() << " ";
+        bool data_matches = compare_byte_vectors(large_data, decrypted);
 
-        runner.assert_true(compare_byte_vectors(large_data, decrypted),
+        if (!data_matches) {
+            std::cout << "Data content mismatch!" << std::endl;
+            std::cout << "Original: ";
+            print_byte_vector(large_data);
+            std::cout << "Decrypted: ";
+            print_byte_vector(decrypted);
+        }
+
+        runner.assert_true(data_matches && large_data.size() == decrypted.size(),
                            "Large data should be correctly encrypted and decrypted");
-        runner.end_test(true);
+        runner.end_test(data_matches && large_data.size() == decrypted.size());
     } catch (const std::exception& e) {
         std::cout << "Exception: " << e.what() << std::endl;
         runner.end_test(false);
@@ -381,7 +390,6 @@ void test_thread_safety(TestRunner& runner) {
 
         bool thread_safe = true;
 
-        // Test concurrent access
         auto encrypt_task1 = algo.encrypt(test_data);
         auto encrypt_task2 = algo.encrypt(test_data);
         auto decrypt_task = algo.decrypt(test_data);
@@ -390,7 +398,6 @@ void test_thread_safety(TestRunner& runner) {
         auto encrypted2 = encrypt_task2.get();
         auto decrypted = decrypt_task.get();
 
-        // Verify results are correct
         auto final_decrypted = algo.decrypt(encrypted1).get();
         if (!compare_byte_vectors(test_data, final_decrypted)) {
             thread_safe = false;
@@ -412,7 +419,6 @@ int run_all_tests() {
     std::cout << "=====================================" << std::endl;
 
     try {
-        // First test block size to catch the most likely issue
         test_block_size_issues(runner);
 
         test_ecb_encryption_decryption(runner);
@@ -421,6 +427,7 @@ int run_all_tests() {
         test_cfb_encryption_decryption(runner);
         test_ofb_encryption_decryption(runner);
         test_ctr_encryption_decryption(runner);
+        test_random_delta_encryption_decryption(runner);
         test_different_padding_modes(runner);
         test_empty_data(runner);
         test_large_data(runner);

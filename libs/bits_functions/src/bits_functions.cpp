@@ -64,39 +64,47 @@ namespace bits_functions {
     }
 
     std::vector<std::byte> xor_vectors(const std::vector<std::byte> &a, const std::vector<std::byte> &b, size_t size) {
-        std::vector<std::byte> result(size);
-        for (int i = 0; i < size; ++i) {
-            result[i] = a[i] ^ b[i];
+        if (a.size() < size || b.size() < size) {
+            throw std::invalid_argument("Input vectors are too small for XOR operation");
         }
+
+        std::vector<std::byte> result;
+        result.reserve(size);
+
+        for (size_t i = 0; i < size; ++i) {
+            result.push_back(a[i] ^ b[i]);
+        }
+
         return result;
     }
 
-    std::vector<std::byte> add_number_to_bytes(const std::vector<std::byte>& data, uint64_t& number) {
-        std::vector<std::byte> result;
-        result.reserve(data.size());
+    std::vector<std::byte> add_number_to_bytes(const std::vector<std::byte>& data, uint64_t number) {
+        std::vector<std::byte> result = data;
 
-        for (auto b : data) {
-            uint64_t current = static_cast<uint64_t>(static_cast<uint8_t>(b));
-            uint64_t sum = (current + number) % 256;
-            result.push_back(static_cast<std::byte>(sum));
+        uint64_t carry = number;
+        for (int i = result.size() - 1; i >= 0 && carry > 0; --i) {
+            uint64_t current_value = static_cast<uint64_t>(result[i]);
+            uint64_t sum = current_value + carry;
+            result[i] = static_cast<std::byte>(sum & 0xFF);
+            carry = sum >> 8;
         }
 
         return result;
     }
 
     std::vector<std::byte> add_byte_vectors(const std::vector<std::byte>& vec1, const std::vector<std::byte>& vec2) {
-        if (vec1.size() != vec2.size()) {
-            throw std::invalid_argument("Vectors must have the same size");
-        }
+        size_t max_size = std::max(vec1.size(), vec2.size());
+        std::vector<std::byte> result(max_size, std::byte{0});
 
-        std::vector<std::byte> result;
-        result.reserve(vec1.size());
+        uint16_t carry = 0;
 
-        for (size_t i = 0; i < vec1.size(); ++i) {
-            uint8_t byte1 = static_cast<uint8_t>(vec1[i]);
-            uint8_t byte2 = static_cast<uint8_t>(vec2[i]);
-            uint8_t sum = static_cast<uint8_t>((byte1 + byte2) % 256);
-            result.push_back(static_cast<std::byte>(sum));
+        for (int i = max_size - 1; i >= 0; --i) {
+            uint8_t val1 = (i < static_cast<int>(vec1.size())) ? static_cast<uint8_t>(vec1[i]) : 0;
+            uint8_t val2 = (i < static_cast<int>(vec2.size())) ? static_cast<uint8_t>(vec2[i]) : 0;
+
+            uint16_t sum = val1 + val2 + carry;
+            result[i] = static_cast<std::byte>(sum & 0xFF);
+            carry = sum >> 8;
         }
 
         return result;
