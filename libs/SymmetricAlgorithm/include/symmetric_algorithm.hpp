@@ -53,7 +53,10 @@ namespace symmerical_algorithm {
         virtual size_t get_block_size() = 0;
     };
 
-    class TestEncyption: public SymmetricEncryption {
+    class TestEncryption: public SymmetricEncryption {
+    private:
+        std::vector<std::byte> key;
+        size_t block_size = 8;
     public:
         void set_key(const std::vector<std::byte>& key) override;
         std::vector<std::byte> encrypt(const std::vector<std::byte>& block) override;
@@ -72,6 +75,18 @@ namespace symmerical_algorithm {
 
         mutable std::mutex mutex;
 
+        std::vector<std::byte> ECB(const std::vector<std::byte>& data, bool encrypt);
+        std::vector<std::byte> CBC(const std::vector<std::byte>& data, bool encrypt);
+        std::vector<std::byte> PCBC(const std::vector<std::byte>& data, bool encrypt);
+        std::vector<std::byte> CFB(const std::vector<std::byte>& data, bool encrypt);
+        std::vector<std::byte> OFB(const std::vector<std::byte>& data, bool encrypt);
+        std::vector<std::byte> CTR(const std::vector<std::byte>& data, bool encrypt);
+        std::vector<std::byte> RandomDelta(const std::vector<std::byte>& data, bool encrypt);
+
+        void padding(std::vector<std::byte>& data, size_t n_bytes);
+
+        void remove_padding(std::vector<std::byte>& data);
+
 
     public:
         SymmetricAlgorithm(std::vector<std::byte> key_,
@@ -88,18 +103,6 @@ namespace symmerical_algorithm {
 
         std::future<std::vector<std::byte>> decrypt(const std::vector<std::byte>& data);
         std::future<void> decrypt(const std::filesystem::path& input_file, const std::filesystem::path& output_file);
-
-        std::vector<std::byte> ECB(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> CBC(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> PCBC(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> CFB(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> OFB(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> CTR(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> RandomDelta(const std::vector<std::byte>& data, bool encrypt);
-
-        void padding(std::vector<std::byte>& data, size_t n_bytes);
-
-        void remove_padding(std::vector<std::byte>& data);
     };
 
-} // namespace Crypto
+}

@@ -2,20 +2,24 @@
 
 namespace symmerical_algorithm {
 
-    std::vector<std::byte> TestEncyption::encrypt(const std::vector<std::byte>& block) {
-        return block;
+    std::vector<std::byte> TestEncryption::encrypt(const std::vector<std::byte>& block) {
+        std::vector<std::byte> result(block.size());
+        for (size_t i = 0; i < block.size(); ++i) {
+            result[i] = block[i] ^ key[i % key.size()];
+        }
+        return result;
     }
 
-    std::vector<std::byte> TestEncyption::decrypt(const std::vector<std::byte>& block) {
-        return block;
+    std::vector<std::byte> TestEncryption::decrypt(const std::vector<std::byte>& block) {
+        return encrypt(block);
     }
 
-    size_t TestEncyption::get_block_size() {
-        return 8;
+    size_t TestEncryption::get_block_size() {
+        return block_size;
     }
 
-    void TestEncyption::set_key(const std::vector<std::byte> &key) {
-        return;
+    void TestEncryption::set_key(const std::vector<std::byte>& key) {
+        this->key = key;
     }
 
     SymmetricAlgorithm::SymmetricAlgorithm(std::vector<std::byte> key_,
@@ -35,22 +39,14 @@ namespace symmerical_algorithm {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
             switch (encryption_mode) {
-                case EncryptionModes::ECB:
-                    return ECB(data, true);
-                case EncryptionModes::CBC:
-                    return CBC(data, true);
-                case EncryptionModes::PCBC:
-                    return PCBC(data, true);
-                case EncryptionModes::CFB:
-                    return CFB(data, true);
-                case EncryptionModes::OFB:
-                    return OFB(data, true);
-                case EncryptionModes::CTR:
-                    return CTR(data, true);
-                case EncryptionModes::RandomDelta:
-                    return RandomDelta(data, true);
-                default:
-                    throw std::runtime_error("Invalid encryption mode");
+                case EncryptionModes::ECB: return ECB(data, true);
+                case EncryptionModes::CBC: return CBC(data, true);
+                case EncryptionModes::PCBC: return PCBC(data, true);
+                case EncryptionModes::CFB: return CFB(data, true);
+                case EncryptionModes::OFB: return OFB(data, true);
+                case EncryptionModes::CTR: return CTR(data, true);
+                case EncryptionModes::RandomDelta: return RandomDelta(data, true);
+                default: throw std::runtime_error("Invalid encryption mode");
             }
         });
     }
@@ -65,8 +61,16 @@ namespace symmerical_algorithm {
     std::future<std::vector<std::byte>> SymmetricAlgorithm::decrypt(const std::vector<std::byte>& data) {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
-
-            return data;
+            switch (encryption_mode) {
+                case EncryptionModes::ECB: return ECB(data, false);
+                case EncryptionModes::CBC: return CBC(data, false);
+                case EncryptionModes::PCBC: return PCBC(data, false);
+                case EncryptionModes::CFB: return CFB(data, false);
+                case EncryptionModes::OFB: return OFB(data, false);
+                case EncryptionModes::CTR: return CTR(data, false);
+                case EncryptionModes::RandomDelta: return RandomDelta(data, false);
+                default: throw std::runtime_error("Invalid encryption mode");
+            }
         });
     }
 
@@ -81,39 +85,37 @@ namespace symmerical_algorithm {
     std::vector<std::byte> SymmetricAlgorithm::ECB(const std::vector<std::byte>& data, bool encrypt) {
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data;
-        new_data.resize(data.size());
 
         if (encrypt) {
-            size_t required_blocks = (data.size() + block_size - 1) / block_size;
-            padding(new_data, required_blocks * block_size);
+            new_data = data;
+            size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+            padding(new_data, required_size);
+        } else {
+            new_data = data;
         }
 
-        std::vector<std::thread> threads;
 
+        // remove threading temporarily
         for (size_t i = 0; i < new_data.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                std::vector<std::byte> block(
-                        data.begin() + i,
-                        data.begin() + std::min(i + block_size, data.size())
-                );
+            size_t end_index = std::min(i + block_size, new_data.size());
+            std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
-                std::vector<std::byte> processed_block;
-                if (encrypt) {
-                    processed_block = this->algorithm->encrypt(block);
-                } else {
-                    processed_block = this->algorithm->decrypt(block);
-                }
+            std::vector<std::byte> processed_block;
+            if (encrypt) {
+                processed_block = this->algorithm->encrypt(block);
+            } else {
+                processed_block = this->algorithm->decrypt(block);
+            }
 
-                std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
-            });
+            std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
         }
 
-        for (auto& t : threads) {
-            t.join();
+        if (!encrypt) {
+            remove_padding(new_data);
         }
+
         return new_data;
     }
-
     std::vector<std::byte> SymmetricAlgorithm::CBC(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for CBC mode");
@@ -128,58 +130,41 @@ namespace symmerical_algorithm {
         }
 
         if (encrypt) {
-            size_t required_blocks = (data.size() + block_size - 1) / block_size;
-            new_data.resize(required_blocks * block_size);
-            padding(new_data, data.size());
+            new_data = data;
+            size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+            padding(new_data, required_size);
+        } else {
+            new_data = data;
+        }
 
+        if (encrypt) {
             std::vector<std::byte> previous_block = iv;
 
             for (size_t i = 0; i < new_data.size(); i += block_size) {
-                std::vector<std::byte> block(
-                        data.begin() + i,
-                        data.begin() + std::min(i + block_size, data.size())
-                );
+                size_t end_index = std::min(i + block_size, new_data.size());
+                std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
-                auto xored_block = bits_functions::xor_vectors(block, previous_block, block_size);
+                auto xored_block = bits_functions::xor_vectors(block, previous_block, block.size());
                 auto processed_block = this->algorithm->encrypt(xored_block);
 
                 std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
                 previous_block = processed_block;
             }
         } else {
-
-            std::vector<std::thread> threads;
-            std::vector<std::byte> iv_copy = iv;
+            std::vector<std::byte> previous_block = iv;
 
             for (size_t i = 0; i < new_data.size(); i += block_size) {
-                threads.emplace_back([this, &data, &new_data, iv_copy, i, block_size]() {
-                    const size_t block_index = i / block_size;
+                size_t end_index = std::min(i + block_size, new_data.size());
+                std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
-                    std::vector<std::byte> block(
-                            data.begin() + i,
-                            data.begin() + std::min(i + block_size, new_data.size())
-                    );
+                auto decrypted_block = this->algorithm->decrypt(block);
+                auto plain_block = bits_functions::xor_vectors(decrypted_block, previous_block, block.size());
 
-                    std::vector<std::byte> previous_block;
-                    if (block_index == 0) {
-                        previous_block = iv_copy;
-                    } else {
-                        previous_block = std::vector<std::byte>(
-                                new_data.begin() + (i - block_size),
-                                new_data.begin() + i
-                        );
-                    }
-
-                    auto decrypted_block = this->algorithm->decrypt(block);
-                    auto plain_block = bits_functions::xor_vectors(decrypted_block, previous_block, block_size);
-
-                    std::copy(plain_block.begin(), plain_block.end(), new_data.begin() + i);
-                });
+                std::copy(plain_block.begin(), plain_block.end(), new_data.begin() + i);
+                previous_block = block;
             }
 
-            for (auto& t : threads) {
-                t.join();
-            }
+            remove_padding(new_data);
         }
 
         return new_data;
@@ -189,43 +174,48 @@ namespace symmerical_algorithm {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for PCBC mode");
         }
+
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data;
-        new_data.resize(data.size());
-
-        if (encrypt) {
-            size_t required_blocks = (data.size() + block_size - 1) / block_size;
-            padding(new_data, required_blocks * block_size);
-        }
-
         auto& iv = init_vector.value();
 
         if (iv.size() < block_size) {
             iv.resize(block_size);
         }
 
+        if (encrypt) {
+            new_data = data;
+            size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+            padding(new_data, required_size);
+        } else {
+            new_data = data;
+        }
+
         std::vector<std::byte> feedback = iv;
 
         for (size_t i = 0; i < new_data.size(); i += block_size) {
-            std::vector<std::byte> block(
-                    data.begin() + i,
-                    data.begin() + std::min(i + block_size, data.size())
-            );
+            size_t end_index = std::min(i + block_size, new_data.size());
+            std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
+
             if (encrypt) {
-                auto xor_block = bits_functions::xor_vectors(feedback, block, block_size);
-                xor_block = this->algorithm->encrypt(xor_block);
-                std::copy(xor_block.begin(), xor_block.end(), new_data.begin() + i);
-                feedback = bits_functions::xor_vectors(block, xor_block, block_size);
+                auto xor_block = bits_functions::xor_vectors(feedback, block, block.size());
+                auto encrypted_block = this->algorithm->encrypt(xor_block);
+                std::copy(encrypted_block.begin(), encrypted_block.end(), new_data.begin() + i);
+                feedback = bits_functions::xor_vectors(block, encrypted_block, block.size());
             } else {
-                auto encrypted_block = this->algorithm->decrypt(block);
-                feedback = bits_functions::xor_vectors( feedback, encrypted_block, block_size);
-                std::copy(feedback.begin(), feedback.end(), new_data.begin() + i);
-                feedback = bits_functions::xor_vectors(block, feedback, block_size);
+                auto decrypted_block = this->algorithm->decrypt(block);
+                auto plain_block = bits_functions::xor_vectors(decrypted_block, feedback, block.size());
+                std::copy(plain_block.begin(), plain_block.end(), new_data.begin() + i);
+                feedback = bits_functions::xor_vectors(block, plain_block, block.size());
             }
         }
 
+        if (!encrypt) {
+            remove_padding(new_data);
+        }
         return new_data;
     }
+
 
     std::vector<std::byte> SymmetricAlgorithm::CFB(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
@@ -234,64 +224,48 @@ namespace symmerical_algorithm {
 
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data;
-        new_data.resize(data.size());
-
-
         auto& iv = init_vector.value();
+
         if (iv.size() < block_size) {
             iv.resize(block_size);
         }
 
         if (encrypt) {
-            size_t required_blocks = (data.size() + block_size - 1) / block_size;
-            padding(new_data, required_blocks * block_size);
+            new_data = data;
+            size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+            padding(new_data, required_size);
+        } else {
+            new_data = data;
+        }
 
+        if (encrypt) {
             std::vector<std::byte> feedback = iv;
 
             for (size_t i = 0; i < new_data.size(); i += block_size) {
-                auto encrypted_block = this->algorithm->encrypt(feedback);
-                std::vector<std::byte> block(
-                        data.begin() + i,
-                        data.begin() + std::min(i + block_size, data.size())
-                );
+                size_t end_index = std::min(i + block_size, new_data.size());
+                std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
-                feedback = bits_functions::xor_vectors(block, encrypted_block, block_size);
-                std::copy(feedback.begin(), feedback.end(), new_data.begin() + i);
+                auto encrypted_feedback = this->algorithm->encrypt(feedback);
+                auto cipher_block = bits_functions::xor_vectors(block, encrypted_feedback, block.size());
+
+                std::copy(cipher_block.begin(), cipher_block.end(), new_data.begin() + i);
+                feedback = cipher_block;
             }
         } else {
-
-            std::vector<std::thread> threads;
-            std::vector<std::byte> iv_copy = iv;
+            std::vector<std::byte> feedback = iv;
 
             for (size_t i = 0; i < new_data.size(); i += block_size) {
-                threads.emplace_back([this, &data, &new_data, iv_copy, i, block_size]() {
-                    const size_t block_index = i / block_size;
+                size_t end_index = std::min(i + block_size, new_data.size());
+                std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
-                    std::vector<std::byte> block(
-                            data.begin() + i,
-                            data.begin() + std::min(i + block_size, data.size())
-                    );
+                auto encrypted_feedback = this->algorithm->encrypt(feedback);
+                auto plain_block = bits_functions::xor_vectors(block, encrypted_feedback, block.size());
 
-                    std::vector<std::byte> feedback;
-                    if (block_index == 0) {
-                        feedback = iv_copy;
-                    } else {
-                        feedback = std::vector<std::byte>(
-                                new_data.begin() + (i - block_size),
-                                new_data.begin() + i
-                        );
-                    }
-
-                    auto encrypted_feedback = this->algorithm->encrypt(feedback);
-                    auto plain_block = bits_functions::xor_vectors(encrypted_feedback, block, block_size);
-
-                    std::copy(plain_block.begin(), plain_block.end(), new_data.begin() + i);
-                });
+                std::copy(plain_block.begin(), plain_block.end(), new_data.begin() + i);
+                feedback = block;
             }
 
-            for (auto& t : threads) {
-                t.join();
-            }
+            remove_padding(new_data);
         }
 
         return new_data;
@@ -317,8 +291,13 @@ namespace symmerical_algorithm {
             size_t current_block_size = std::min(block_size, data.size() - i);
             std::vector<std::byte> block(
                     data.begin() + i,
-                    data.begin() + current_block_size);
-            auto encrypted_block = bits_functions::xor_vectors(feedback, block, current_block_size);
+                    data.begin() + i +  current_block_size);
+            std::vector<std::byte> keystream_block(
+                    feedback.begin(),
+                    feedback.begin() + current_block_size
+            );
+            auto encrypted_block = bits_functions::xor_vectors(keystream_block,
+                                                               block, current_block_size);
             std::copy(encrypted_block.begin(), encrypted_block.end(), new_data.begin() + i);
         }
 
@@ -374,11 +353,13 @@ namespace symmerical_algorithm {
 
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data;
-        new_data.resize(data.size());
 
         if (encrypt) {
-            size_t required_blocks = (data.size() + block_size - 1) / block_size;
-            padding(new_data, required_blocks * block_size);
+            new_data = data;
+            size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+            padding(new_data, required_size);
+        } else {
+            new_data = data;
         }
 
         auto& iv = init_vector.value();
@@ -411,8 +392,11 @@ namespace symmerical_algorithm {
             t.join();
         }
 
+        if (!encrypt)
+            remove_padding(new_data);
         return new_data;
     }
+
 
     void SymmetricAlgorithm::padding(std::vector<std::byte>& data, size_t target_size) {
         if (data.size() >= target_size) return;
@@ -450,7 +434,21 @@ namespace symmerical_algorithm {
             case PaddingModes::ISO_10126: {
                 size_t padding_size = static_cast<size_t>(data.back());
                 if (padding_size > 0 && padding_size <= data.size()) {
-                    data.resize(data.size() - padding_size);
+                    // Проверяем, что все байты padding корректны (для PKCS7)
+                    if (padding_mode == PaddingModes::PKCS7) {
+                        bool valid = true;
+                        for (size_t i = data.size() - padding_size; i < data.size(); ++i) {
+                            if (static_cast<size_t>(data[i]) != padding_size) {
+                                valid = false;
+                                break;
+                            }
+                        }
+                        if (valid) {
+                            data.resize(data.size() - padding_size);
+                        }
+                    } else {
+                        data.resize(data.size() - padding_size);
+                    }
                 }
                 break;
             }
@@ -470,8 +468,10 @@ namespace symmerical_algorithm {
                 }
                 break;
             }
-                // Для Zeros паддинг не удаляется автоматически
             case PaddingModes::Zeros:
+                // Для Zero padding нужно знать исходный размер данных
+                // В общем случае это сложно, поэтому обычно не используется
+                // или требуется внешняя информация о размере
                 break;
         }
     }
