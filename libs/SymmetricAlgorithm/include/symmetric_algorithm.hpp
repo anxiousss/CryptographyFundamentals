@@ -9,7 +9,8 @@
 #include <mutex>
 #include <iostream>
 #include <cassert>
-
+#include <fstream>
+#include <stdexcept>
 #include "bits_functions.hpp"
 
 namespace symmerical_algorithm {
@@ -99,10 +100,12 @@ namespace symmerical_algorithm {
         ~SymmetricAlgorithm() = default;
 
         std::future<std::vector<std::byte>> encrypt(const std::vector<std::byte>& data);
-        std::future<void> encrypt(const std::filesystem::path& input_file, const std::filesystem::path& output_file);
+        std::future<void> encrypt(const std::filesystem::path& input_file,
+                                  std::optional<std::filesystem::path>& output_file);
 
         std::future<std::vector<std::byte>> decrypt(const std::vector<std::byte>& data);
-        std::future<void> decrypt(const std::filesystem::path& input_file, const std::filesystem::path& output_file);
+        std::future<void> decrypt(const std::filesystem::path& input_file,
+                                  std::optional<std::filesystem::path>& output_file);
     };
 
 }

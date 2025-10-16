@@ -51,20 +51,6 @@ void print_byte_vector(const std::vector<std::byte>& data) {
     std::cout << "]" << std::dec << std::endl;
 }
 
-void test_block_size_issues(TestRunner& runner) {
-    runner.start_test("Block Size Verification");
-
-    auto algorithm = std::make_unique<TestEncryption>();
-    size_t block_size = algorithm->get_block_size();
-
-    std::cout << "Block size: " << block_size << " ";
-
-    runner.assert_true(block_size > 0, "Block size must be greater than 0");
-    runner.assert_true(block_size <= 64, "Block size should be reasonable");
-
-    runner.end_test(true);
-}
-
 void test_ecb_encryption_decryption(TestRunner& runner) {
     runner.start_test("ECB Encryption/Decryption");
 
@@ -412,6 +398,132 @@ void test_thread_safety(TestRunner& runner) {
     }
 }
 
+void test_image_and_text_files(TestRunner& runner) {
+    runner.start_test("Image and Text Files Encryption");
+
+    try {
+        std::vector<std::byte> key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04},
+                                      std::byte{0x05}, std::byte{0x06}, std::byte{0x07}, std::byte{0x08}};
+        std::vector<std::byte> iv = {std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                                     std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22}};
+
+        auto algorithm = std::make_unique<TestEncryption>();
+        algorithm->set_key(key);
+
+        SymmetricAlgorithm cipher(
+                key,
+                EncryptionModes::CBC,
+                PaddingModes::PKCS7,
+                iv,
+                {},
+                std::move(algorithm)
+        );
+
+
+        std::filesystem::path base_dir = "C:\\CryptographyFundamentals\\tests\\test_symmetric_algorithms\\src\\";
+
+        {
+            std::filesystem::path text_path = base_dir / "test_text.txt";
+            std::ofstream text_file(text_path);
+            text_file << "This is a test text file for encryption.\n";
+            text_file << "Line 2: Testing symmetric algorithm.\n";
+            text_file << "Line 3: Final line of text content.";
+            text_file.close();
+
+            std::cout << "Testing text file encryption..." << std::endl;
+
+            std::filesystem::path encrypted_text_path = base_dir / "encrypted_text.bin";
+            std::filesystem::path decrypted_text_path = base_dir / "decrypted_text.txt";
+
+            std::optional<std::filesystem::path> opt_encrypted_text = encrypted_text_path;
+            cipher.encrypt(text_path, opt_encrypted_text).get();
+
+            std::optional<std::filesystem::path> opt_decrypted_text = decrypted_text_path;
+            cipher.decrypt(encrypted_text_path, opt_decrypted_text).get();
+
+            std::ifstream original_text(text_path);
+            std::ifstream decrypted_text(decrypted_text_path);
+
+            std::string original_content((std::istreambuf_iterator<char>(original_text)),
+                                         std::istreambuf_iterator<char>());
+            std::string decrypted_content((std::istreambuf_iterator<char>(decrypted_text)),
+                                          std::istreambuf_iterator<char>());
+
+            original_text.close();
+            decrypted_text.close();
+
+            runner.assert_equal(original_content, decrypted_content,
+                                "Text file content should match after encryption/decryption");
+
+            std::cout << "Text file test: Original " << original_content.size()
+                      << " bytes, Decrypted " << decrypted_content.size() << " bytes" << std::endl;
+            std::cout << "Text files saved in: " << base_dir << std::endl;
+        }
+
+        {
+            std::cout << "Testing image file encryption..." << std::endl;
+
+            std::filesystem::path img = "C:\\CryptographyFundamentals\\tests\\test_symmetric_algorithms\\src\\SMILEFACE.jpg";
+
+            if (!std::filesystem::exists(img)) {
+                std::cout << "Image file not found: " << img << std::endl;
+                runner.end_test(false);
+                return;
+            }
+
+            std::filesystem::path encrypted_image_path = img.parent_path() / "encrypted_SMILEFACE.bin";
+            std::filesystem::path decrypted_image_path = img.parent_path() / "decrypted_SMILEFACE.jpg";
+
+            std::optional<std::filesystem::path> opt_encrypted_image = encrypted_image_path;
+            cipher.encrypt(img, opt_encrypted_image).get();
+
+            std::optional<std::filesystem::path> opt_decrypted_image = decrypted_image_path;
+            cipher.decrypt(encrypted_image_path, opt_decrypted_image).get();
+
+            auto original_size = std::filesystem::file_size(img);
+            auto encrypted_size = std::filesystem::file_size(encrypted_image_path);
+            auto decrypted_size = std::filesystem::file_size(decrypted_image_path);
+
+            std::cout << "Image test: Original " << original_size << " bytes, "
+                      << "Encrypted " << encrypted_size << " bytes, "
+                      << "Decrypted " << decrypted_size << " bytes" << std::endl;
+
+            runner.assert_true(original_size == decrypted_size,
+                               "Image file size should match after decryption");
+
+            std::ifstream original_img(img, std::ios::binary);
+            std::ifstream encrypted_img(encrypted_image_path, std::ios::binary);
+
+            bool files_different = false;
+            char orig_byte, enc_byte;
+            for (size_t i = 0; i < std::min(original_size, encrypted_size) && i < 100; ++i) {
+                original_img.read(&orig_byte, 1);
+                encrypted_img.read(&enc_byte, 1);
+                if (orig_byte != enc_byte) {
+                    files_different = true;
+                    break;
+                }
+            }
+
+            original_img.close();
+            encrypted_img.close();
+
+            runner.assert_true(files_different, "Encrypted image should be different from original");
+
+            std::cout << "Image encryption test completed successfully" << std::endl;
+            std::cout << "Encrypted file: " << encrypted_image_path << std::endl;
+            std::cout << "Decrypted file: " << decrypted_image_path << std::endl;
+        }
+
+
+        runner.end_test(true);
+
+    } catch (const std::exception& e) {
+        std::cout << "Exception in image/text test: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
 int run_all_tests() {
     TestRunner runner;
 
@@ -419,7 +531,6 @@ int run_all_tests() {
     std::cout << "=====================================" << std::endl;
 
     try {
-        test_block_size_issues(runner);
 
         test_ecb_encryption_decryption(runner);
         test_cbc_encryption_decryption(runner);
@@ -432,6 +543,7 @@ int run_all_tests() {
         test_empty_data(runner);
         test_large_data(runner);
         test_thread_safety(runner);
+        test_image_and_text_files(runner);
     } catch (const std::exception& e) {
         std::cout << "Test interrupted by exception: " << e.what() << std::endl;
     }

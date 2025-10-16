@@ -52,9 +52,78 @@ namespace symmerical_algorithm {
     }
 
     std::future<void> SymmetricAlgorithm::encrypt(const std::filesystem::path& input_file,
-                                                  const std::filesystem::path& output_file) {
+                                                  std::optional<std::filesystem::path>& output_file) {
         return std::async(std::launch::async, [this, input_file, output_file]() {
             std::lock_guard<std::mutex> lock(mutex);
+
+            if (!std::filesystem::exists(input_file)) {
+                throw std::runtime_error("Input file does not exist: " + input_file.string());
+            }
+
+            std::filesystem::path actual_output_path;
+            if (output_file.has_value()) {
+                actual_output_path = output_file.value();
+            } else {
+                actual_output_path = input_file.parent_path() /
+                                     (input_file.stem().string() + "_encrypted" + input_file.extension().string());
+            }
+
+            auto output_dir = actual_output_path.parent_path();
+            if (!output_dir.empty() && !std::filesystem::exists(output_dir)) {
+                std::filesystem::create_directories(output_dir);
+            }
+
+            std::ifstream in_file(input_file, std::ios::binary);
+            std::ofstream out_file(actual_output_path, std::ios::binary);
+
+            if (!in_file.is_open()) {
+                throw std::runtime_error("Cannot open input file: " + input_file.string());
+            }
+            if (!out_file.is_open()) {
+                throw std::runtime_error("Cannot open output file: " + actual_output_path.string());
+            }
+
+            in_file.seekg(0, std::ios::end);
+            size_t file_size = in_file.tellg();
+            in_file.seekg(0, std::ios::beg);
+
+            std::vector<std::byte> file_data(file_size);
+            in_file.read(reinterpret_cast<char*>(file_data.data()), file_size);
+
+            std::vector<std::byte> encrypted_data;
+            switch (encryption_mode) {
+                case EncryptionModes::ECB:
+                    encrypted_data = ECB(file_data, true);
+                    break;
+                case EncryptionModes::CBC:
+                    encrypted_data = CBC(file_data, true);
+                    break;
+                case EncryptionModes::PCBC:
+                    encrypted_data = PCBC(file_data, true);
+                    break;
+                case EncryptionModes::CFB:
+                    encrypted_data = CFB(file_data, true);
+                    break;
+                case EncryptionModes::OFB:
+                    encrypted_data = OFB(file_data, true);
+                    break;
+                case EncryptionModes::CTR:
+                    encrypted_data = CTR(file_data, true);
+                    break;
+                case EncryptionModes::RandomDelta:
+                    encrypted_data = RandomDelta(file_data, true);
+                    break;
+                default:
+                    throw std::runtime_error("Unsupported encryption mode");
+            }
+
+            out_file.write(reinterpret_cast<const char*>(encrypted_data.data()), encrypted_data.size());
+
+            in_file.close();
+            out_file.close();
+
+            std::cout << "File encrypted: " << input_file << " -> " << actual_output_path << std::endl;
+
         });
     }
 
@@ -75,9 +144,81 @@ namespace symmerical_algorithm {
     }
 
     std::future<void> SymmetricAlgorithm::decrypt(const std::filesystem::path& input_file,
-                                                  const std::filesystem::path& output_file) {
+                                                  std::optional<std::filesystem::path>& output_file) {
         return std::async(std::launch::async, [this, input_file, output_file]() {
             std::lock_guard<std::mutex> lock(mutex);
+            if (!std::filesystem::exists(input_file)) {
+                throw std::runtime_error("Input file does not exist: " + input_file.string());
+            }
+
+            std::filesystem::path actual_output_path;
+            if (output_file.has_value()) {
+                actual_output_path = output_file.value();
+            } else {
+                std::string stem = input_file.stem().string();
+
+                if (stem.length() > 10 && stem.substr(stem.length() - 10) == "_encrypted") {
+                    stem = stem.substr(0, stem.length() - 10);
+                }
+
+                actual_output_path = input_file.parent_path() /
+                                     (stem + "_decrypted" + input_file.extension().string());
+
+            }
+
+            auto output_dir = actual_output_path.parent_path();
+            if (!output_dir.empty() && !std::filesystem::exists(output_dir)) {
+                std::filesystem::create_directories(output_dir);
+            }
+
+            std::ifstream in_file(input_file, std::ios::binary);
+            std::ofstream out_file(actual_output_path, std::ios::binary);
+
+            if (!in_file.is_open() || !out_file.is_open()) {
+                throw std::runtime_error("Cannot open input or output file");
+            }
+
+            in_file.seekg(0, std::ios::end);
+            size_t file_size = in_file.tellg();
+            in_file.seekg(0, std::ios::beg);
+
+            std::vector<std::byte> encrypted_data(file_size);
+            in_file.read(reinterpret_cast<char*>(encrypted_data.data()), file_size);
+
+            std::vector<std::byte> decrypted_data;
+            switch (encryption_mode) {
+                case EncryptionModes::ECB:
+                    decrypted_data = ECB(encrypted_data, false);
+                    break;
+                case EncryptionModes::CBC:
+                    decrypted_data = CBC(encrypted_data, false);
+                    break;
+                case EncryptionModes::PCBC:
+                    decrypted_data = PCBC(encrypted_data, false);
+                    break;
+                case EncryptionModes::CFB:
+                    decrypted_data = CFB(encrypted_data, false);
+                    break;
+                case EncryptionModes::OFB:
+                    decrypted_data = OFB(encrypted_data, false);
+                    break;
+                case EncryptionModes::CTR:
+                    decrypted_data = CTR(encrypted_data, false);
+                    break;
+                case EncryptionModes::RandomDelta:
+                    decrypted_data = RandomDelta(encrypted_data, false);
+                    break;
+                default:
+                    throw std::runtime_error("Unsupported encryption mode");
+            }
+
+            out_file.write(reinterpret_cast<const char*>(decrypted_data.data()), decrypted_data.size());
+
+            in_file.close();
+            out_file.close();
+
+            std::cout << "File decrypted: " << input_file << " -> " << actual_output_path << std::endl;
+
         });
     }
 

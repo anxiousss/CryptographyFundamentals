@@ -40,11 +40,9 @@ public:
     void print_summary();
 };
 
-// Helper functions for testing
 bool compare_byte_vectors(const std::vector<std::byte>& v1, const std::vector<std::byte>& v2);
 void print_byte_vector(const std::vector<std::byte>& data);
 
-// Test function declarations
 void test_ecb_encryption_decryption(TestRunner& runner);
 void test_cbc_encryption_decryption(TestRunner& runner);
 void test_pcbc_encryption_decryption(TestRunner& runner);
@@ -56,9 +54,5 @@ void test_different_padding_modes(TestRunner& runner);
 void test_empty_data(TestRunner& runner);
 void test_large_data(TestRunner& runner);
 void test_thread_safety(TestRunner& runner);
-
-// Debug function to check block size issues
-void test_block_size_issues(TestRunner& runner);
-
-// Main test runner function
+void test_image_and_text_files(TestRunner& runner);
 int run_all_tests();
