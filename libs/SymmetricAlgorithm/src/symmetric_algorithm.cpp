@@ -1,6 +1,6 @@
 #include "symmetric_algorithm.hpp"
 
-namespace symmerical_algorithm {
+namespace symmetrical_context {
 
     std::vector<std::byte> TestEncryption::encrypt(const std::vector<std::byte>& block) {
         std::vector<std::byte> result(block.size());
@@ -22,12 +22,12 @@ namespace symmerical_algorithm {
         this->key = key;
     }
 
-    SymmetricAlgorithm::SymmetricAlgorithm(std::vector<std::byte> key_,
+    SymmetricContext::SymmetricContext(std::vector<std::byte> key_,
                                            EncryptionModes encryption_mode_,
                                            PaddingModes padding_mode_,
                                            std::optional<std::vector<std::byte>> init_vector_,
                                            std::vector<std::any> params_,
-                                           std::unique_ptr<SymmetricEncryption> algorithm_)
+                                           std::unique_ptr<SymmetricAlgorithm> algorithm_)
             : key(std::move(key_)),
               encryption_mode(encryption_mode_),
               padding_mode(padding_mode_),
@@ -35,7 +35,7 @@ namespace symmerical_algorithm {
               params(std::move(params_)),
               algorithm(std::move(algorithm_)) {}
 
-    std::future<std::vector<std::byte>> SymmetricAlgorithm::encrypt(const std::vector<std::byte>& data) {
+    std::future<std::vector<std::byte>> SymmetricContext::encrypt(const std::vector<std::byte>& data) {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
             switch (encryption_mode) {
@@ -51,7 +51,7 @@ namespace symmerical_algorithm {
         });
     }
 
-    std::future<void> SymmetricAlgorithm::encrypt(const std::filesystem::path& input_file,
+    std::future<void> SymmetricContext::encrypt(const std::filesystem::path& input_file,
                                                   std::optional<std::filesystem::path>& output_file) {
         return std::async(std::launch::async, [this, input_file, output_file]() {
             std::lock_guard<std::mutex> lock(mutex);
@@ -127,7 +127,7 @@ namespace symmerical_algorithm {
         });
     }
 
-    std::future<std::vector<std::byte>> SymmetricAlgorithm::decrypt(const std::vector<std::byte>& data) {
+    std::future<std::vector<std::byte>> SymmetricContext::decrypt(const std::vector<std::byte>& data) {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
             switch (encryption_mode) {
@@ -143,7 +143,7 @@ namespace symmerical_algorithm {
         });
     }
 
-    std::future<void> SymmetricAlgorithm::decrypt(const std::filesystem::path& input_file,
+    std::future<void> SymmetricContext::decrypt(const std::filesystem::path& input_file,
                                                   std::optional<std::filesystem::path>& output_file) {
         return std::async(std::launch::async, [this, input_file, output_file]() {
             std::lock_guard<std::mutex> lock(mutex);
@@ -222,7 +222,7 @@ namespace symmerical_algorithm {
         });
     }
 
-    std::vector<std::byte> SymmetricAlgorithm::ECB(const std::vector<std::byte>& data, bool encrypt) {
+    std::vector<std::byte> SymmetricContext::ECB(const std::vector<std::byte>& data, bool encrypt) {
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data;
 
@@ -265,7 +265,7 @@ namespace symmerical_algorithm {
         return new_data;
     }
 
-    std::vector<std::byte> SymmetricAlgorithm::CBC(const std::vector<std::byte>& data, bool encrypt) {
+    std::vector<std::byte> SymmetricContext::CBC(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for CBC mode");
         }
@@ -340,7 +340,7 @@ namespace symmerical_algorithm {
         return new_data;
     }
 
-    std::vector<std::byte> SymmetricAlgorithm::PCBC(const std::vector<std::byte>& data, bool encrypt) {
+    std::vector<std::byte> SymmetricContext::PCBC(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for PCBC mode");
         }
@@ -385,7 +385,7 @@ namespace symmerical_algorithm {
         return new_data;
     }
 
-    std::vector<std::byte> SymmetricAlgorithm::CFB(const std::vector<std::byte>& data, bool encrypt) {
+    std::vector<std::byte> SymmetricContext::CFB(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for CFB mode");
         }
@@ -452,7 +452,7 @@ namespace symmerical_algorithm {
         return new_data;
     }
 
-    std::vector<std::byte> SymmetricAlgorithm::OFB(const std::vector<std::byte>& data, bool encrypt) {
+    std::vector<std::byte> SymmetricContext::OFB(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for OFB mode");
         }
@@ -483,7 +483,7 @@ namespace symmerical_algorithm {
         return new_data;
     }
 
-    std::vector<std::byte> SymmetricAlgorithm::CTR(const std::vector<std::byte>& data, bool encrypt) {
+    std::vector<std::byte> SymmetricContext::CTR(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for CTR mode");
         }
@@ -525,7 +525,7 @@ namespace symmerical_algorithm {
         return new_data;
     }
 
-    std::vector<std::byte> SymmetricAlgorithm::RandomDelta(const std::vector<std::byte>& data, bool encrypt) {
+    std::vector<std::byte> SymmetricContext::RandomDelta(const std::vector<std::byte>& data, bool encrypt) {
         if (!init_vector.has_value()) {
             throw std::runtime_error("Initialization vector is required for RandomDelta mode");
         }
@@ -567,7 +567,7 @@ namespace symmerical_algorithm {
         return new_data;
     }
 
-    void SymmetricAlgorithm::padding(std::vector<std::byte>& data, size_t target_size) {
+    void SymmetricContext::padding(std::vector<std::byte>& data, size_t target_size) {
         if (data.size() >= target_size) return;
 
         size_t original_size = data.size();
@@ -597,7 +597,7 @@ namespace symmerical_algorithm {
     }
 
 
-    void SymmetricAlgorithm::remove_padding(std::vector<std::byte>& data) {
+    void SymmetricContext::remove_padding(std::vector<std::byte>& data) {
         if (data.empty()) return;
 
         switch (padding_mode) {

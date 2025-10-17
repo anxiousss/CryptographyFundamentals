@@ -1,0 +1,3 @@
+add_library(feistel_network src/feistel_network.cpp)
+target_link_libraries(feistel_network PUBLIC symmetric_algorithm)
+target_include_directories(feistel_network PUBLIC include)

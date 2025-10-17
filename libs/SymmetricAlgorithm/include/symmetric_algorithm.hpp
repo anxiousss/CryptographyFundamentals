@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include "bits_functions.hpp"
 
-namespace symmerical_algorithm {
+namespace symmetrical_context {
 
     enum class EncryptionModes {
         ECB = 0,
@@ -35,7 +35,7 @@ namespace symmerical_algorithm {
     class RoundKeyGeneration {
     public:
         virtual ~RoundKeyGeneration() = default;
-        virtual std::vector<std::vector<std::byte>> key_extension(const std::vector<std::byte>& key) = 0;
+        virtual std::vector<std::vector<std::byte>> key_extension(const std::vector<std::byte>& key, size_t rounds) = 0;
     };
 
     class EncryptionTransformation {
@@ -45,16 +45,16 @@ namespace symmerical_algorithm {
                                                const std::vector<std::byte>& round_key) const = 0;
     };
 
-    class SymmetricEncryption {
+    class SymmetricAlgorithm {
     public:
-        virtual ~SymmetricEncryption() = default;
+        virtual ~SymmetricAlgorithm() = default;
         virtual void set_key(const std::vector<std::byte>& key) = 0;
         virtual std::vector<std::byte> encrypt(const std::vector<std::byte>& block) = 0;
         virtual std::vector<std::byte> decrypt(const std::vector<std::byte>& block) = 0;
         virtual size_t get_block_size() = 0;
     };
 
-    class TestEncryption: public SymmetricEncryption {
+    class TestEncryption: public SymmetricAlgorithm {
     private:
         std::vector<std::byte> key;
         size_t block_size = 8;
@@ -65,14 +65,14 @@ namespace symmerical_algorithm {
         size_t get_block_size() override;
     };
 
-    class SymmetricAlgorithm {
+    class SymmetricContext {
     private:
         std::vector<std::byte> key;
         EncryptionModes encryption_mode;
         PaddingModes padding_mode;
         std::optional<std::vector<std::byte>> init_vector;
         std::vector<std::any> params;
-        std::unique_ptr<SymmetricEncryption> algorithm;
+        std::unique_ptr<SymmetricAlgorithm> algorithm;
 
         mutable std::mutex mutex;
 
@@ -90,14 +90,14 @@ namespace symmerical_algorithm {
 
 
     public:
-        SymmetricAlgorithm(std::vector<std::byte> key_,
+        SymmetricContext(std::vector<std::byte> key_,
                            EncryptionModes encryption_mode_,
                            PaddingModes padding_mode_,
                            std::optional<std::vector<std::byte>> init_vector_ = std::nullopt,
                            std::vector<std::any> params_ = {},
-                           std::unique_ptr<SymmetricEncryption> algorithm_ = nullptr);
+                           std::unique_ptr<SymmetricAlgorithm> algorithm_ = nullptr);
 
-        ~SymmetricAlgorithm() = default;
+        ~SymmetricContext() = default;
 
         std::future<std::vector<std::byte>> encrypt(const std::vector<std::byte>& data);
         std::future<void> encrypt(const std::filesystem::path& input_file,

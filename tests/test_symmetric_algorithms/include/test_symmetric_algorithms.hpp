@@ -7,7 +7,7 @@
 #include <memory>
 #include "symmetric_algorithm.hpp"
 
-using namespace symmerical_algorithm;
+using namespace symmetrical_context;
 
 class TestRunner {
 private:

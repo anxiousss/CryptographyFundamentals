@@ -7,8 +7,10 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 add_subdirectory(libs/bits_functions)
 add_subdirectory(libs/SymmetricAlgorithm)
+add_subdirectory(libs/FeistelNetwork)
 add_subdirectory(tests/test_bits_functions)
 add_subdirectory(tests/test_symmetric_algorithms)
+
 
 add_executable(lab1t1 "lab 1/ex1.cpp")
 add_executable(lab1t2 "lab 1/ex2.cpp")
