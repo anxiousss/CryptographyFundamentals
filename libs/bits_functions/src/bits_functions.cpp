@@ -110,6 +110,10 @@ namespace bits_functions {
         return result;
     }
 
+    std::vector<std::byte> key_extension(const std::vector<std::byte>& data) {
+
+    }
+
 }
 
 std::ostream &operator<<(std::ostream &os, std::byte b) {

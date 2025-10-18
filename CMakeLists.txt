@@ -8,6 +8,7 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 add_subdirectory(libs/bits_functions)
 add_subdirectory(libs/SymmetricAlgorithm)
 add_subdirectory(libs/FeistelNetwork)
+add_subdirectory(libs/DES)
 add_subdirectory(tests/test_bits_functions)
 add_subdirectory(tests/test_symmetric_algorithms)
 
