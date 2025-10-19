@@ -21,26 +21,27 @@ namespace bits_functions {
 
     std::vector<std::byte> bits_permutation(const std::vector<std::byte> &msg, const std::vector<unsigned int> &IP,
                                             PermutationRule rule) {
-
         size_t n_msg = msg.size();
-        size_t bits_number = n_msg * 8;
-        std::vector<std::byte> permutation(n_msg, std::byte{0});
+        size_t msg_bits = n_msg * 8;
+
+        size_t output_bits = IP.size();
+        size_t output_bytes = (output_bits + 7) / 8;
+        std::vector<std::byte> permutation(output_bytes, std::byte{0});
 
         bool eldest_first = (rule == PermutationRule::ELDEST_ZERO_BASED ||
                              rule == PermutationRule::ELDEST_ONE_BASED);
         bool one_based = (rule == PermutationRule::ELDEST_ONE_BASED ||
                           rule == PermutationRule::YOUNGEST_ONE_BASED);
 
-
-        for (size_t i = 0; i < bits_number; ++i) {
+        for (size_t i = 0; i < output_bits; ++i) {
             unsigned int source_index = IP[i];
 
             if (one_based) {
-                if (source_index == 0 || source_index > bits_number) {
+                if (source_index == 0 || source_index > msg_bits) {
                     throw std::out_of_range("IP index out of range with 1-based numbering");
                 }
                 source_index -= 1;
-            } else if (source_index >= bits_number) {
+            } else if (source_index >= msg_bits) {
                 throw std::out_of_range("IP index out of range with 0-based numbering");
             }
 
@@ -78,7 +79,7 @@ namespace bits_functions {
         return result;
     }
 
-    std::vector<std::byte> add_number_to_bytes(const std::vector<std::byte>& data, uint64_t number) {
+    std::vector<std::byte> add_number_to_bytes(const std::vector<std::byte> &data, uint64_t number) {
         std::vector<std::byte> result = data;
 
         uint64_t carry = number;
@@ -92,7 +93,7 @@ namespace bits_functions {
         return result;
     }
 
-    std::vector<std::byte> add_byte_vectors(const std::vector<std::byte>& vec1, const std::vector<std::byte>& vec2) {
+    std::vector<std::byte> add_byte_vectors(const std::vector<std::byte> &vec1, const std::vector<std::byte> &vec2) {
         size_t max_size = std::max(vec1.size(), vec2.size());
         std::vector<std::byte> result(max_size, std::byte{0});
 
@@ -110,12 +111,118 @@ namespace bits_functions {
         return result;
     }
 
-    std::vector<std::byte> key_extension(const std::vector<std::byte>& data) {
+    std::byte add_odd_bit(std::byte &b) {
+        int count = 0;
+        for (int i = 7; i >= 1; --i) {
+            count += (std::to_integer<unsigned int>(b) >> i) & 1;
+        }
+        if (count % 2 == 0) {
+            b |= std::byte{0b00000001};
+        } else {
+            b &= std::byte{0b11111110};
+        }
 
+        return b;
     }
 
-}
+    std::vector<std::byte> key_extension(const std::vector<std::byte> &data, size_t block_size) {
+        std::vector<std::byte> result_data;
+        std::byte b{0};
 
-std::ostream &operator<<(std::ostream &os, std::byte b) {
-    return os << std::bitset<8>(std::to_integer<int>(b));
+        size_t j = 0;
+        for (size_t i = 0; i < data.size() * block_size; ++i) {
+            if (j == 7) {
+                add_odd_bit(b);
+                result_data.push_back(b);
+                j = 0;
+                b = std::byte{0};
+            }
+
+            bool bit = get_eldest_bit(data[i / 8], i % 8);
+            set_eldest_bit(b, j, bit);
+            ++j;
+        }
+        result_data.push_back(b);
+        return result_data;
+    }
+
+    void left_shift_28bit(std::vector<std::byte> &data, int shift) {
+        if (data.size() != 4) {
+            throw std::invalid_argument("Data must be 4 bytes for 28-bit value");
+        }
+
+        uint32_t val = 0;
+        for (int i = 0; i < 28; ++i) {
+            bool bit = bits_functions::get_eldest_bit(data[i / 8], i % 8);
+            val = (val << 1) | (bit ? 1 : 0);
+        }
+
+        val = ((val << shift) | (val >> (28 - shift))) & 0x0FFFFFFF;
+
+        for (int i = 27; i >= 0; --i) {
+            bool bit = (val >> i) & 1;
+            bits_functions::set_eldest_bit(data[(27 - i) / 8], (27 - i) % 8, bit);
+        }
+    }
+
+    std::vector<std::byte> expansion_e(const std::vector<std::byte>& input_32bit) {
+        if (input_32bit.size() != 4) {
+            throw std::invalid_argument("Expansion E requires 32-bit input (4 bytes)");
+        }
+
+        std::vector<std::byte> result(6, std::byte{0});
+
+        std::vector<std::vector<int>> e_table = {
+                {31, 0, 1, 2, 3, 4},
+                {3, 4, 5, 6, 7, 8},
+                {7, 8, 9, 10, 11, 12},
+                {11, 12, 13, 14, 15, 16},
+                {15, 16, 17, 18, 19, 20},
+                {19, 20, 21, 22, 23, 24},
+                {23, 24, 25, 26, 27, 28},
+                {27, 28, 29, 30, 31, 0}
+        };
+
+        for (int row = 0; row < 8; ++row) {
+            for (int col = 0; col < 6; ++col) {
+                int source_bit = e_table[row][col];
+                bool bit_value = bits_functions::get_eldest_bit(
+                        input_32bit[source_bit / 8], source_bit % 8);
+                int target_bit_pos = row * 6 + col;
+                bits_functions::set_eldest_bit(result[target_bit_pos / 8], target_bit_pos % 8, bit_value);
+            }
+        }
+
+        return result;
+    }
+
+    std::vector<std::byte> convert_8blocks_to_6blocks(const std::vector<std::byte>& block) {
+        if (block.size() != 6) {
+            throw std::runtime_error("block must be 6 bytes");
+        }
+
+        std::vector<std::byte> output(8, std::byte{0});
+
+        for (int i = 0; i < 8; ++i) {
+            std::byte value{0};
+            for (int j = 0; j < 6; ++j) {
+                int bit_pos = i * 6 + j;
+                int byte_idx = bit_pos / 8;
+                int bit_in_byte = 7 - (bit_pos % 8);
+
+                bool bit = (std::to_integer<uint8_t>(block[byte_idx]) >> bit_in_byte) & 1;
+                if (bit) {
+                    value |= std::byte(1) << (5 - j);
+                }
+            }
+            output[i] = value;
+        }
+
+        return output;
+    }
+
+
+    std::ostream &operator<<(std::ostream &os, std::byte b) {
+        return os << std::bitset<8>(std::to_integer<int>(b));
+    }
 }

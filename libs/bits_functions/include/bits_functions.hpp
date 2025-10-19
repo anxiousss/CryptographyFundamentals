@@ -33,7 +33,15 @@ namespace bits_functions {
 
     std::vector<std::byte> add_byte_vectors(const std::vector<std::byte>& vec1, const std::vector<std::byte>& vec2);
 
-    std::vector<std::byte> key_extension(const std::vector<std::byte>& data);
+    std::byte add_odd_bit(std::byte& b);
+
+    std::vector<std::byte> key_extension(const std::vector<std::byte>& data, size_t block_size);
+
+    void left_shift_28bit(std::vector<std::byte>& data, int shift);
+
+    std::vector<std::byte> expansion_e(const std::vector<std::byte>& input_32bit);
+
+    std::vector<std::byte> convert_8blocks_to_6blocks(const std::vector<std::byte>& block);
 }
 
 std::ostream &operator<<(std::ostream &os, std::byte b);

@@ -44,7 +44,7 @@ namespace symmetrical_context {
     public:
         virtual ~EncryptionTransformation() = default;
         virtual std::vector<std::byte> encrypt(const std::vector<std::byte>& block,
-                                               const std::vector<std::byte>& round_key) const = 0;
+                                               const std::vector<std::byte>& round_key) = 0;
     };
 
     class SymmetricAlgorithm {
