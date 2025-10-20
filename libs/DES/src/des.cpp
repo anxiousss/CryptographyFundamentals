@@ -49,12 +49,13 @@ namespace des {
     }
 
     std::byte FeistelTransformation::s_block_transformation(std::byte &b, size_t s_block_index) {
-        uint8_t input = static_cast<uint8_t>(b) & 0x3F;
-        uint8_t row = ((input & 0x20) >> 4) | (input & 0x01);
-        uint8_t col = (input & 0x1E) >> 1;
-        uint8_t value = static_cast<uint8_t>(S_BLOCKS[s_block_index][row][col]);
+        uint8_t input = static_cast<uint8_t>(b);
 
-        return static_cast<std::byte>(value);
+        uint8_t row = ((input & 0x20) >> 4) | ((input & 0x01) >> 0);
+        uint8_t col = (input & 0x1E) >> 1;
+
+        uint8_t value = S_BLOCKS[s_block_index][row][col];
+        return static_cast<std::byte>(value << 4);
     }
 
     std::vector<std::byte> FeistelTransformation::encrypt(const std::vector<std::byte> &block,
@@ -74,14 +75,17 @@ namespace des {
             b_vector2.push_back(s_block_transformation(b_vector1[i], i));
         }
 
-        std::vector<std::byte> result;
-        result.reserve(4);
 
-        for (size_t i = 0; i < 4; ++i) {
-            uint8_t highNibble = static_cast<uint8_t>(b_vector2[i * 2]) & 0x0F;
-            uint8_t lowNibble = static_cast<uint8_t>(b_vector2[i * 2 + 1]) & 0x0F;
-            uint8_t byteValue = (highNibble << 4) | lowNibble;
-            result.push_back(static_cast<std::byte>(byteValue));
+        std::vector<std::byte> result(4, std::byte{0});
+        for (size_t i = 0; i < 8; ++i) {
+            size_t byte_index = i / 2;
+            uint8_t value = static_cast<uint8_t>(b_vector2[i]);
+
+            if (i % 2 == 0) {
+                result[byte_index] |= static_cast<std::byte>(value << 4);
+            } else {
+                result[byte_index] |= static_cast<std::byte>(value);
+            }
         }
 
         return bits_functions::bits_permutation(result, P_BLOCK, bits_functions::PermutationRule::ELDEST_ONE_BASED);

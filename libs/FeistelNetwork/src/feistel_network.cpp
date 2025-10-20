@@ -33,7 +33,7 @@ namespace feistel_network {
         std::vector<std::byte> L(block.begin(), block.begin() + block.size() / 2);
         std::vector<std::byte> R(block.begin() + block.size() / 2, block.end());
 
-        for (size_t i = rounds - 1; i > -1; --i) {
+        for (int i = static_cast<int>(rounds) - 1; i >= 0; --i) {
             auto encrypted_L = encryption_transformer->encrypt(R, keys[i]);
             auto xor_block = bits_functions::xor_vectors(R, encrypted_L, block.size() / 2);
 
