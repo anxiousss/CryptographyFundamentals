@@ -17,4 +17,4 @@ add_executable(lab1t1 "lab 1/ex1.cpp")
 add_executable(lab1t2 "lab 1/ex2.cpp")
 
 target_link_libraries(lab1t1 test_bits_functions bits_functions)
-target_link_libraries(lab1t2 test_symmetric_algorithms symmetric_algorithm)
+target_link_libraries(lab1t2 test_symmetric_algorithms symmetric_algorithm feistel_network des)

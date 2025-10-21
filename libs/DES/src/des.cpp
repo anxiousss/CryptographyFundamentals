@@ -1,5 +1,14 @@
 #include "des.hpp"
 
+void print_byte_vector(const std::vector<std::byte>& data) {
+    std::cout << "Vector size: " << data.size() << " [";
+    for (size_t i = 0; i < std::min(data.size(), size_t(10)); ++i) {
+        std::cout << std::hex << static_cast<int>(data[i]) << " ";
+    }
+    if (data.size() > 10) std::cout << "...";
+    std::cout << "]" << std::dec << std::endl;
+}
+
 namespace des {
 
     std::vector<std::vector<std::byte>>
@@ -48,47 +57,75 @@ namespace des {
         return round_keys;
     }
 
-    std::byte FeistelTransformation::s_block_transformation(std::byte &b, size_t s_block_index) {
-        uint8_t input = static_cast<uint8_t>(b);
+    std::byte FeistelTransformation::s_block_transformation(std::byte& input_byte, size_t s_block_index) {
+        uint8_t input = static_cast<uint8_t>(input_byte);
 
-        uint8_t row = ((input & 0x20) >> 4) | ((input & 0x01) >> 0);
-        uint8_t col = (input & 0x1E) >> 1;
+        // Extract row: bits 1 and 6
+        uint8_t row = ((input & 0x80) >> 6) | ((input & 0x04) >> 2);
 
+        // Extract column: bits 2,3,4,5
+        uint8_t col = (input & 0x78) >> 3;
+
+        // Get value from S-box
         uint8_t value = S_BLOCKS[s_block_index][row][col];
-        return static_cast<std::byte>(value << 4);
+
+        return static_cast<std::byte>(value);
     }
 
     std::vector<std::byte> FeistelTransformation::encrypt(const std::vector<std::byte> &block,
                                                           const std::vector<std::byte> &round_key) {
-
         if (block.size() != 4 || round_key.size() != 6) {
-            throw std::invalid_argument("Invalid block or key size");
+            throw std::invalid_argument("Feistel: Invalid block or key size");
         }
 
-        std::vector<std::byte> expanded_block = bits_functions::expansion_e(block);
-        expanded_block = bits_functions::xor_vectors(expanded_block, round_key, round_key.size());
-        std::vector<std::byte> b_vector1 = bits_functions::convert_8blocks_to_6blocks(expanded_block);
+        std::cout << "Feistel input block: ";
+        print_byte_vector(block);
+        std::cout << "Round key: ";
+        print_byte_vector(round_key);
 
-        std::vector<std::byte> b_vector2;
-        b_vector2.reserve(8);
-        for (size_t i = 0; i < 8; ++i) {
-            b_vector2.push_back(s_block_transformation(b_vector1[i], i));
+        // Step 1: Expansion E (32-bit to 48-bit)
+        auto expanded_block = bits_functions::expansion_e(block);
+        std::cout << "After expansion E: ";
+        print_byte_vector(expanded_block);
+
+        // Step 2: XOR with round key
+        auto xored_block = bits_functions::xor_vectors(expanded_block, round_key, 6);
+        std::cout << "After XOR with round key: ";
+        print_byte_vector(xored_block);
+
+        // Step 3: Convert to 8 blocks of 6 bits for S-box processing
+        auto six_bit_blocks = bits_functions::convert_8blocks_to_6blocks(xored_block);
+        std::cout << "After 6-bit conversion: ";
+        print_byte_vector(six_bit_blocks);
+
+        // Step 4: S-box substitution
+        std::vector<std::byte> s_box_output(4, std::byte{0});
+
+        for (int i = 0; i < 8; i++) {
+            // Extract 6 bits for this S-box
+            uint8_t six_bits = static_cast<uint8_t>(six_bit_blocks[i]);
+
+            // Apply S-box
+            uint8_t row = ((six_bits & 0x20) >> 4) | (six_bits & 0x01); // bits 1 and 6
+            uint8_t col = (six_bits & 0x1E) >> 1; // bits 2,3,4,5
+
+            uint8_t s_box_value = S_BLOCKS[i][row][col];
+
+            // Store 4-bit result
+            int output_byte = i / 2;
+            int output_shift = (i % 2 == 0) ? 4 : 0;
+            s_box_output[output_byte] |= std::byte(s_box_value) << output_shift;
         }
 
+        std::cout << "After S-box substitution: ";
+        print_byte_vector(s_box_output);
 
-        std::vector<std::byte> result(4, std::byte{0});
-        for (size_t i = 0; i < 8; ++i) {
-            size_t byte_index = i / 2;
-            uint8_t value = static_cast<uint8_t>(b_vector2[i]);
+        // Step 5: Permutation P
+        auto result = bits_functions::bits_permutation(s_box_output, P_BLOCK, bits_functions::PermutationRule::ELDEST_ONE_BASED);
+        std::cout << "After permutation P: ";
+        print_byte_vector(result);
 
-            if (i % 2 == 0) {
-                result[byte_index] |= static_cast<std::byte>(value << 4);
-            } else {
-                result[byte_index] |= static_cast<std::byte>(value);
-            }
-        }
-
-        return bits_functions::bits_permutation(result, P_BLOCK, bits_functions::PermutationRule::ELDEST_ONE_BASED);
+        return result;
     }
 
     DES::DES(const std::vector<std::byte> &key_, std::shared_ptr<DesRoundKeyGeneration> des_round_key_generation,

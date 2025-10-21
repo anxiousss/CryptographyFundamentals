@@ -172,50 +172,57 @@ namespace bits_functions {
 
         std::vector<std::byte> result(6, std::byte{0});
 
-        std::vector<std::vector<int>> e_table = {
-                {31, 0, 1, 2, 3, 4},
-                {3, 4, 5, 6, 7, 8},
-                {7, 8, 9, 10, 11, 12},
-                {11, 12, 13, 14, 15, 16},
-                {15, 16, 17, 18, 19, 20},
-                {19, 20, 21, 22, 23, 24},
-                {23, 24, 25, 26, 27, 28},
-                {27, 28, 29, 30, 31, 0}
+        std::vector<int> E_TABLE = {
+                32,  1,  2,  3,  4,  5,
+                4,  5,  6,  7,  8,  9,
+                8,  9, 10, 11, 12, 13,
+                12, 13, 14, 15, 16, 17,
+                16, 17, 18, 19, 20, 21,
+                20, 21, 22, 23, 24, 25,
+                24, 25, 26, 27, 28, 29,
+                28, 29, 30, 31, 32,  1
         };
 
-        for (int row = 0; row < 8; ++row) {
-            for (int col = 0; col < 6; ++col) {
-                int source_bit = e_table[row][col];
-                bool bit_value = bits_functions::get_eldest_bit(
-                        input_32bit[source_bit / 8], source_bit % 8);
-                int target_bit_pos = row * 6 + col;
-                bits_functions::set_eldest_bit(result[target_bit_pos / 8], target_bit_pos % 8, bit_value);
+        for (size_t i = 0; i < E_TABLE.size(); ++i) {
+            int source_bit = E_TABLE[i] - 1; // Convert to 0-based
+            int source_byte = source_bit / 8;
+            int source_bit_in_byte = 7 - (source_bit % 8); // MSB first
+
+            bool bit_value = (std::to_integer<uint8_t>(input_32bit[source_byte]) >> source_bit_in_byte) & 1;
+
+            int target_byte = i / 8;
+            int target_bit_in_byte = 7 - (i % 8);
+
+            if (bit_value) {
+                result[target_byte] |= std::byte(1) << target_bit_in_byte;
             }
         }
 
         return result;
     }
 
-    std::vector<std::byte> convert_8blocks_to_6blocks(const std::vector<std::byte>& block) {
-        if (block.size() != 6) {
-            throw std::runtime_error("block must be 6 bytes");
+    std::vector<std::byte> convert_8blocks_to_6blocks (const std::vector<std::byte>& input_48bit) {
+        if (input_48bit.size() != 6) {
+            throw std::runtime_error("Input must be 6 bytes (48 bits)");
         }
 
-        std::vector<std::byte> output(8, std::byte{0});
+        std::vector<std::byte> output(8, std::byte{0}); // 8 blocks of 6 bits
 
-        for (int i = 0; i < 8; ++i) {
-            std::byte value{0};
-            for (int j = 0; j < 6; ++j) {
-                int bit_pos = i * 6 + j;
+        // Extract 8 groups of 6 bits from 48-bit input
+        for (int i = 0; i < 8; i++) {
+            int start_bit = i * 6;
+            uint8_t six_bits = 0;
+
+            for (int j = 0; j < 6; j++) {
+                int bit_pos = start_bit + j;
                 int byte_idx = bit_pos / 8;
-                int bit_in_byte = 7 - (bit_pos % 8);
+                int bit_in_byte = 7 - (bit_pos % 8); // MSB first
 
-                bool bit = (std::to_integer<uint8_t>(block[byte_idx]) >> bit_in_byte) & 1;
-                if (bit) {
-                    value |= std::byte(1) << (5 - j);
-                }
+                bool bit = (std::to_integer<uint8_t>(input_48bit[byte_idx]) >> bit_in_byte) & 1;
+                six_bits = (six_bits << 1) | (bit ? 1 : 0);
             }
-            output[i] = value;
+
+            output[i] = static_cast<std::byte>(six_bits);
         }
 
         return output;
