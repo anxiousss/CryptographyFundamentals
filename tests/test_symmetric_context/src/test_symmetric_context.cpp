@@ -3,12 +3,12 @@
 #include <cassert>
 #include <string>
 #include <memory>
-#include "symmetric_algorithm.hpp"
-#include "test_symmetric_algorithms.hpp"
+#include "symmetric_context.hpp"
+#include "test_symmetric_context.hpp"
 
 void TestRunner::start_test(const std::string& test_name) {
     current_test = test_name;
-    std::cout << "TEST: " << test_name << " ... ";
+    std::cout << "TEST: " << test_name << " ";
 }
 
 void TestRunner::end_test(bool passed) {
@@ -70,8 +70,7 @@ void test_basic_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        // Прямой тест DES без всяких режимов
-        std::cout << "Testing DES encrypt/decrypt directly..." << std::endl;
+        std::cout << "Testing DES encrypt/decrypt directly" << std::endl;
 
         auto encrypted = algorithm->encrypt(test_data);
         std::cout << "Encrypted: ";
@@ -102,13 +101,11 @@ void test_ecb_encryption_decryption(TestRunner& runner) {
     runner.start_test("ECB Encryption/Decryption with DES");
 
     try {
-        // Правильный 56-битный ключ DES (7 байт)
         std::vector<std::byte> key = {
                 std::byte{0x13}, std::byte{0x34}, std::byte{0x57}, std::byte{0x79},
                 std::byte{0x9B}, std::byte{0xBC}, std::byte{0xDF}
         };
 
-        // Данные должны быть кратны размеру блока DES (8 байт)
         std::vector<std::byte> test_data = {
                 std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
                 std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF}
@@ -140,7 +137,6 @@ void test_cbc_encryption_decryption(TestRunner& runner) {
                 std::byte{0x05}, std::byte{0x06}, std::byte{0x07}
         };
 
-        // IV должен быть размером с блок DES (8 байт)
         std::vector<std::byte> iv = {
                 std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
                 std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22}
@@ -368,12 +364,11 @@ void test_different_padding_modes(TestRunner& runner) {
                 std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22}
         };
 
-        // Тестовые данные разного размера для проверки паддинга
         std::vector<std::vector<std::byte>> test_data_sets = {
-                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44}}, // 4 байта
-                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  // 8 байт (ровно блок)
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44}},
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  
                         std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}},
-                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  // 12 байт
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  
                         std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
                         std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}}
         };
@@ -460,10 +455,9 @@ void test_large_data(TestRunner& runner) {
                 std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22}
         };
 
-        // Создаем данные больше одного блока DES (8 байт)
         std::vector<std::byte> large_data;
-        for (int i = 0; i < 24; ++i) { // 24 байта = 3 блока DES
-            large_data.push_back(static_cast<std::byte>(0x20 + i)); // Начинаем с печатных символов
+        for (int i = 0; i < 24; ++i) { 
+            large_data.push_back(static_cast<std::byte>(0x20 + i)); 
         }
 
         auto algorithm = create_des_algorithm(key);
@@ -472,7 +466,7 @@ void test_large_data(TestRunner& runner) {
         SymmetricContext algo(key, EncryptionModes::CBC, PaddingModes::PKCS7,
                                 iv, {}, std::move(algorithm));
 
-        std::cout << "Step 1 - Original data: " << large_data.size() << " bytes" << std::endl;
+        std::cout << "\nStep 1 - Original data: " << large_data.size() << " bytes" << std::endl;
 
         auto encrypted = algo.encrypt(large_data).get();
         std::cout << "Step 2 - After encryption: " << encrypted.size() << " bytes" << std::endl;
@@ -525,7 +519,6 @@ void test_thread_safety(TestRunner& runner) {
 
         bool thread_safe = true;
 
-        // Запускаем несколько операций параллельно
         auto encrypt_task1 = algo.encrypt(test_data);
         auto encrypt_task2 = algo.encrypt(test_data);
         auto decrypt_task = algo.decrypt(test_data);
@@ -534,12 +527,12 @@ void test_thread_safety(TestRunner& runner) {
         auto encrypted2 = encrypt_task2.get();
         auto decrypted = decrypt_task.get();
 
-        // Проверяем, что шифрование одного и того же текста дает одинаковый результат
+        
         if (!compare_byte_vectors(encrypted1, encrypted2)) {
             std::cout << "Warning: Same plaintext encrypted to different ciphertexts (expected in CBC mode)" << std::endl;
         }
 
-        // Проверяем, что можем расшифровать обратно
+        
         auto final_decrypted = algo.decrypt(encrypted1).get();
         if (!compare_byte_vectors(test_data, final_decrypted)) {
             thread_safe = false;
@@ -579,12 +572,13 @@ void test_image_and_text_files(TestRunner& runner) {
                 std::move(algorithm)
         );
 
-        // Используем текущую директорию для тестовых файлов
-        std::filesystem::path base_dir = std::filesystem::current_path() / "des_test_files";
+        // win std::filesystem::path base_dir = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src";
+        // wsl std::filesystem::path base_dir =  "/mnt/c/Users/анчоус/CLionProjects/CryptographyFundamentals/tests/test_symmetric_context/src"
+        std::filesystem::path base_dir = "/mnt/c/Users/анчоус/CLionProjects/CryptographyFundamentals/tests/test_symmetric_context/src";
         std::filesystem::create_directories(base_dir);
 
         {
-            // Тестируем текстовый файл
+            
             std::filesystem::path text_path = base_dir / "test_text.txt";
             std::ofstream text_file(text_path);
             text_file << "This is a test text file for DES encryption.\n";
@@ -592,7 +586,7 @@ void test_image_and_text_files(TestRunner& runner) {
             text_file << "Line 3: Final line of text content.";
             text_file.close();
 
-            std::cout << "Testing text file encryption with DES..." << std::endl;
+            std::cout << "Testing text file encryption with DES" << std::endl;
 
             std::filesystem::path encrypted_text_path = base_dir / "encrypted_text_des.bin";
             std::filesystem::path decrypted_text_path = base_dir / "decrypted_text_des.txt";
@@ -622,13 +616,13 @@ void test_image_and_text_files(TestRunner& runner) {
         }
 
         {
-            // Тестируем с бинарным файлом (создаем простой тестовый файл)
-            std::cout << "Testing binary file encryption with DES..." << std::endl;
+            
+            std::cout << "Testing binary file encryption with DES" << std::endl;
 
             std::filesystem::path binary_path = base_dir / "test_binary.bin";
             std::ofstream binary_file(binary_path, std::ios::binary);
 
-            // Записываем тестовые бинарные данные
+            
             std::vector<unsigned char> test_binary_data = {
                     0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
                     0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
@@ -657,7 +651,7 @@ void test_image_and_text_files(TestRunner& runner) {
             runner.assert_true(original_size == decrypted_size,
                                "Binary file size should match after DES decryption");
 
-            // Проверяем, что зашифрованный файл отличается от оригинала
+            
             std::ifstream original_bin(binary_path, std::ios::binary);
             std::ifstream encrypted_bin(encrypted_binary_path, std::ios::binary);
 
@@ -680,6 +674,39 @@ void test_image_and_text_files(TestRunner& runner) {
             std::cout << "Binary encryption test completed successfully" << std::endl;
         }
 
+        {
+            // win path  std::filesystem::path img_path = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src\\SMILEFACE.jpg";
+            // wsl path  std::filesystem::path img_path = "/mnt/c/Users/анчоус/CLionProjects/CryptographyFundamentals/tests/test_symmetric_context/src/SMILEFACE.jpg";
+            std::filesystem::path img_path = "/mnt/c/Users/анчоус/CLionProjects/CryptographyFundamentals/tests/test_symmetric_context/src/SMILEFACE.jpg";
+            std::cout << "Testing img file encryption with DES" << std::endl;
+
+            std::filesystem::path encrypted_img_path = base_dir / "encrypted_img_des.bin";
+            std::filesystem::path decrypted_img_path = base_dir / "decrypted_img_des.jpg";
+
+            std::optional<std::filesystem::path> opt_encrypted_img = encrypted_img_path;
+            cipher.encrypt(img_path, opt_encrypted_img).get();
+
+            std::optional<std::filesystem::path> opt_decrypted_img = decrypted_img_path;
+            cipher.decrypt(encrypted_img_path, opt_decrypted_img).get();
+
+            std::ifstream original_img(img_path);
+            std::ifstream decrypted_img(decrypted_img_path);
+
+            std::string original_content((std::istreambuf_iterator<char>(original_img)),
+                                         std::istreambuf_iterator<char>());
+            std::string decrypted_content((std::istreambuf_iterator<char>(decrypted_img)),
+                                          std::istreambuf_iterator<char>());
+
+            original_img.close();
+            decrypted_img.close();
+
+            runner.assert_equal(original_content, decrypted_content,
+                                "Img file content should match after DES encryption/decryption");
+
+            std::cout << "Img file test: Original " << std::filesystem::file_size(img_path)
+                      << " bytes, Decrypted " << std::filesystem::file_size(decrypted_img_path) << " bytes" << std::endl;
+        }
+
         std::cout << "All test files saved in: " << base_dir << std::endl;
         runner.end_test(true);
 
@@ -692,12 +719,12 @@ void test_image_and_text_files(TestRunner& runner) {
 int run_all_tests() {
     TestRunner runner;
 
-    std::cout << "Running DES Symmetric Algorithm Tests..." << std::endl;
+    std::cout << "Running DES Symmetric Algorithm Tests" << std::endl;
     std::cout << "========================================" << std::endl;
 
     try {
         test_basic_des(runner);
-        /*test_ecb_encryption_decryption(runner);
+        test_ecb_encryption_decryption(runner);
         test_cbc_encryption_decryption(runner);
         test_pcbc_encryption_decryption(runner);
         test_cfb_encryption_decryption(runner);
@@ -708,7 +735,7 @@ int run_all_tests() {
         test_empty_data(runner);
         test_large_data(runner);
         test_thread_safety(runner);
-        test_image_and_text_files(runner);*/
+        test_image_and_text_files(runner);
     } catch (const std::exception& e) {
         std::cout << "Test interrupted by exception: " << e.what() << std::endl;
     }

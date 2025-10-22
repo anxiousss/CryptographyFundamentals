@@ -1,4 +1,4 @@
-#include "test_symmetric_algorithms.hpp"
+#include "test_symmetric_context.hpp"
 
 int main() {
     run_all_tests();

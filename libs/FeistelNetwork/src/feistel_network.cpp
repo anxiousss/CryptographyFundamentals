@@ -3,8 +3,8 @@
 namespace feistel_network {
 
     FeistelNetwork::FeistelNetwork(std::vector<std::byte> key_, size_t rounds_,
-                                   std::shared_ptr<symmetrical_context::RoundKeyGeneration> round_key_generator_,
-                                   std::shared_ptr<symmetrical_context::EncryptionTransformation> encryption_transformer_):
+                                   std::shared_ptr<symmetric_context::RoundKeyGeneration> round_key_generator_,
+                                   std::shared_ptr<symmetric_context::EncryptionTransformation> encryption_transformer_):
                                    key(std::move(key_)), rounds(rounds_), round_key_generator(round_key_generator_),
                                    encryption_transformer(encryption_transformer_) {}
 
@@ -22,8 +22,8 @@ namespace feistel_network {
 
         std::vector<std::byte> result_block;
         result_block.resize(block.size());
-        std::copy(L.begin(), L.end(), std::back_inserter(result_block));
-        std::copy(R.begin(), R.end(), std::back_inserter(result_block));
+        std::copy(L.begin(), L.end(), result_block.begin());
+        std::copy(R.begin(), R.end(), result_block.begin() + result_block.size() / 2);
 
         return result_block;
     }
@@ -33,8 +33,8 @@ namespace feistel_network {
         std::vector<std::byte> L(block.begin(), block.begin() + block.size() / 2);
         std::vector<std::byte> R(block.begin() + block.size() / 2, block.end());
 
-        for (int i = static_cast<int>(rounds) - 1; i >= 0; --i) {
-            auto encrypted_L = encryption_transformer->encrypt(R, keys[i]);
+        for (int i = rounds - 1; i > -1; --i) {
+            auto encrypted_L = encryption_transformer->encrypt(L, keys[i]);
             auto xor_block = bits_functions::xor_vectors(R, encrypted_L, block.size() / 2);
 
             R = L;
@@ -42,8 +42,8 @@ namespace feistel_network {
         }
         std::vector<std::byte> result_block;
         result_block.resize(block.size());
-        std::copy(R.begin(), R.end(), std::back_inserter(result_block));
-        std::copy(L.begin(), L.end(), std::back_inserter(result_block));
+        std::copy(L.begin(), L.end(), result_block.begin());
+        std::copy(R.begin(), R.end(), result_block.begin() + result_block.size() / 2);
 
         return result_block;
     }

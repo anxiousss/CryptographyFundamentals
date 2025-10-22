@@ -15,7 +15,7 @@
 #include <stdexcept>
 #include "bits_functions.hpp"
 
-namespace symmetrical_context {
+namespace symmetric_context {
 
     enum class EncryptionModes {
         ECB = 0,

@@ -1,3 +1,0 @@
-add_library(test_symmetric_algorithms src/test_symmetric_algorithms.cpp)
-target_link_libraries(test_symmetric_algorithms PRIVATE des feistel_network symmetric_algorithm bits_functions)
-target_include_directories(test_symmetric_algorithms PUBLIC include)

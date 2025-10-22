@@ -1,6 +1,6 @@
-#include "symmetric_algorithm.hpp"
+#include "symmetric_context.hpp"
 
-namespace symmetrical_context {
+namespace symmetric_context {
 
     std::vector<std::byte> TestEncryption::encrypt(const std::vector<std::byte>& block) {
         std::vector<std::byte> result(block.size());
@@ -379,9 +379,9 @@ namespace symmetrical_context {
             }
         }
 
-        if (!encrypt) {
+        if (!encrypt)
             remove_padding(new_data);
-        }
+
         return new_data;
     }
 
@@ -458,8 +458,14 @@ namespace symmetrical_context {
         }
 
         auto block_size = this->algorithm->get_block_size();
-        std::vector<std::byte> new_data = data;
-
+        std::vector<std::byte> new_data;
+        if (encrypt) {
+            new_data = data;
+            size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+            padding(new_data, required_size);
+        } else {
+            new_data = data;
+        }
         auto iv_copy = init_vector.value();
 
         if (iv_copy.size() < block_size) {
@@ -480,6 +486,9 @@ namespace symmetrical_context {
             std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
         }
 
+        if (!encrypt)
+            remove_padding(new_data);
+
         return new_data;
     }
 
@@ -489,7 +498,14 @@ namespace symmetrical_context {
         }
 
         auto block_size = this->algorithm->get_block_size();
-        std::vector<std::byte> new_data = data;
+        std::vector<std::byte> new_data;
+        if (encrypt) {
+            new_data = data;
+            size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+            padding(new_data, required_size);
+        } else {
+            new_data = data;
+        }
 
         auto& iv = init_vector.value();
         if (iv.size() < block_size) {
@@ -522,6 +538,9 @@ namespace symmetrical_context {
             t.join();
         }
 
+        if (!encrypt)
+            remove_padding(new_data);
+
         return new_data;
     }
 
@@ -547,23 +566,40 @@ namespace symmetrical_context {
         }
 
         std::vector<std::byte> random_delta(iv_copy.begin() + iv_copy.size() / 2, iv_copy.end());
-        random_delta.resize(block_size);
 
         std::vector<std::byte> current_iv = iv_copy;
+        std::vector<std::thread> threads;
+        std::mutex result_mutex;
         for (size_t i = 0; i < new_data.size(); i += block_size) {
-            size_t end_index = std::min(i + block_size, new_data.size());
-            std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
+            threads.emplace_back([&, i, block_size] {
+                current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
+                size_t end_index = std::min(i + block_size, new_data.size());
+                std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
-            current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
-            auto xor_block = bits_functions::xor_vectors(current_iv, block, block.size());
-            auto processed_block = this->algorithm->encrypt(xor_block);
+                std::vector<std::byte> xor_block;
+                std::vector<std::byte> processed_block;
 
-            std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
+                if (encrypt) {
+                    xor_block = bits_functions::xor_vectors(current_iv, block, block.size());
+                    processed_block = this->algorithm->encrypt(xor_block);
+                    std::lock_guard<std::mutex> lock(result_mutex);
+                    std::copy(processed_block.begin(), processed_block.end(), new_data.begin() + i);
+                } else {
+                    processed_block = this->algorithm->decrypt(block);
+                    xor_block = bits_functions::xor_vectors(current_iv, processed_block, block.size());
+                    std::lock_guard<std::mutex> lock(result_mutex);
+                    std::copy(xor_block.begin(), xor_block.end(), new_data.begin() + i);
+                }
+            });
         }
 
-        if (!encrypt) {
+        for (auto& t : threads) {
+            t.join();
+        }
+
+        if (!encrypt)
             remove_padding(new_data);
-        }
+
         return new_data;
     }
 

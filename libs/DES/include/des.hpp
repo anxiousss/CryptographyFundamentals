@@ -1,13 +1,15 @@
 #pragma once
 
-#include "symmetric_algorithm.hpp"
+#include "symmetric_context.hpp"
 #include "feistel_network.hpp"
+
+void print_byte_vector(const std::vector<std::byte>& data);
 
 namespace des {
     const size_t block_size = 8;
     const size_t rounds = 16;
 
-    class DesRoundKeyGeneration: public symmetrical_context::RoundKeyGeneration {
+    class DesRoundKeyGeneration: public symmetric_context::RoundKeyGeneration {
     public:
         std::vector<unsigned int> PC1 = {57, 49, 41, 33, 25, 17, 9,
                                         1, 58, 50, 42, 34, 26, 18,
@@ -32,7 +34,7 @@ namespace des {
         std::vector<std::vector<std::byte>> key_extension(const std::vector<std::byte> &key, size_t rounds) override;
     };
 
-    class FeistelTransformation: public symmetrical_context::EncryptionTransformation {
+    class FeistelTransformation: public symmetric_context::EncryptionTransformation {
     private:
 
         std::vector<unsigned int> P_BLOCK = {
@@ -101,7 +103,7 @@ namespace des {
                                        const std::vector<std::byte> &round_key) override;
     };
 
-    class DES: public symmetrical_context::SymmetricAlgorithm {
+    class DES: public symmetric_context::SymmetricAlgorithm {
     private:
         std::vector<unsigned int> IP = {
                 58, 50, 42, 34, 26, 18, 10, 2,

@@ -1,3 +1,3 @@
 add_library(des src/des.cpp)
-target_link_libraries(des PUBLIC bits_functions symmetric_algorithm feistel_network)
+target_link_libraries(des PUBLIC bits_functions symmetric_context feistel_network)
 target_include_directories(des PUBLIC include)

@@ -5,10 +5,10 @@
 #include <cassert>
 #include <string>
 #include <memory>
-#include "symmetric_algorithm.hpp"
+#include "symmetric_context.hpp"
 #include "des.hpp"
 
-using namespace symmetrical_context;
+using namespace symmetric_context;
 
 class TestRunner {
 private:
