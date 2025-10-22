@@ -34,6 +34,18 @@ namespace symmetric_context {
         ISO_10126
     };
 
+
+
+    class PaddingMode {
+     private:
+        PaddingModes mode;
+    public:
+        PaddingMode(PaddingModes mode_): mode(mode_) {};
+        void padding(std::vector<std::byte>& data, size_t n_bytes);
+        void remove_padding(std::vector<std::byte>& data);
+    };
+
+
     class RoundKeyGeneration {
     public:
         virtual ~RoundKeyGeneration() = default;
@@ -56,40 +68,43 @@ namespace symmetric_context {
         virtual size_t get_block_size() = 0;
     };
 
-    class TestEncryption: public SymmetricAlgorithm {
+    class EncryptionMode {
     private:
         std::vector<std::byte> key;
-        size_t block_size = 8;
+        PaddingMode padding_mode;
+        std::optional<std::vector<std::byte>> init_vector;
+        std::unique_ptr<SymmetricAlgorithm> algorithm;
     public:
-        void set_key(const std::vector<std::byte>& key) override;
-        std::vector<std::byte> encrypt(const std::vector<std::byte>& block) override;
-        std::vector<std::byte> decrypt(const std::vector<std::byte>& block) override;
-        size_t get_block_size() override;
+        EncryptionModes encryption_mode;
+        EncryptionMode(std::vector<std::byte> key_, EncryptionModes encryption_mode_, PaddingModes padding_mode_,
+                       std::optional<std::vector<std::byte>> init_vector_ = std::nullopt,
+                       std::unique_ptr<SymmetricAlgorithm> algorithm_ = nullptr):
+        key(std::move(key_)), encryption_mode(encryption_mode_), padding_mode(padding_mode_),
+        init_vector(std::move(init_vector_)),
+        algorithm(std::move(algorithm_)) {};
+
+        std::vector<std::byte> ECB_encrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> ECB_decrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> CBC_encrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> CBC_decrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> PCBC_encrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> PCBC_decrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> CFB_encrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> CFB_decrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> OFB_encrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> OFB_decrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> CTR_encrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> CTR_decrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> RandomDelta_encrypt(const std::vector<std::byte>& data);
+        std::vector<std::byte> RandomDelta_decrypt(const std::vector<std::byte>& data);
+
     };
 
     class SymmetricContext {
     private:
-        std::vector<std::byte> key;
-        EncryptionModes encryption_mode;
-        PaddingModes padding_mode;
-        std::optional<std::vector<std::byte>> init_vector;
+        EncryptionMode encryption_mode;
         std::vector<std::any> params;
-        std::unique_ptr<SymmetricAlgorithm> algorithm;
-
         mutable std::mutex mutex;
-
-        std::vector<std::byte> ECB(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> CBC(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> PCBC(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> CFB(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> OFB(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> CTR(const std::vector<std::byte>& data, bool encrypt);
-        std::vector<std::byte> RandomDelta(const std::vector<std::byte>& data, bool encrypt);
-
-        void padding(std::vector<std::byte>& data, size_t n_bytes);
-
-        void remove_padding(std::vector<std::byte>& data);
-
 
     public:
         SymmetricContext(std::vector<std::byte> key_,

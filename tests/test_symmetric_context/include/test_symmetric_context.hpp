@@ -44,7 +44,6 @@ public:
 bool compare_byte_vectors(const std::vector<std::byte>& v1, const std::vector<std::byte>& v2);
 
 void print_byte_vector(const std::vector<std::byte>& data);
-// Создание DES алгоритма с правильными параметрами
 std::unique_ptr<des::DES> create_des_algorithm(const std::vector<std::byte>& key);
 
 void test_basic_des(TestRunner& runner);

@@ -14,7 +14,7 @@ add_subdirectory(tests/test_symmetric_context)
 
 
 add_executable(lab1t1 "lab 1/ex1.cpp")
-add_executable(lab1t2-t5 "lab 1/ex2.cpp")
+add_executable(lab1t2-t5 "lab 1/ex2-5.cpp")
 
 target_link_libraries(lab1t1 test_bits_functions bits_functions)
 target_link_libraries(lab1t2-t5 test_symmetric_context symmetric_context feistel_network des)
