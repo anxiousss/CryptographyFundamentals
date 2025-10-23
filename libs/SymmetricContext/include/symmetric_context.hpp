@@ -34,17 +34,14 @@ namespace symmetric_context {
         ISO_10126
     };
 
-
-
     class PaddingMode {
-     private:
+    private:
         PaddingModes mode;
     public:
         PaddingMode(PaddingModes mode_): mode(mode_) {};
         void padding(std::vector<std::byte>& data, size_t n_bytes);
         void remove_padding(std::vector<std::byte>& data);
     };
-
 
     class RoundKeyGeneration {
     public:
@@ -71,17 +68,17 @@ namespace symmetric_context {
     class EncryptionMode {
     private:
         std::vector<std::byte> key;
-        PaddingMode padding_mode;
         std::optional<std::vector<std::byte>> init_vector;
         std::unique_ptr<SymmetricAlgorithm> algorithm;
     public:
         EncryptionModes encryption_mode;
-        EncryptionMode(std::vector<std::byte> key_, EncryptionModes encryption_mode_, PaddingModes padding_mode_,
+
+        EncryptionMode(std::vector<std::byte> key_, EncryptionModes encryption_mode_,
                        std::optional<std::vector<std::byte>> init_vector_ = std::nullopt,
                        std::unique_ptr<SymmetricAlgorithm> algorithm_ = nullptr):
-        key(std::move(key_)), encryption_mode(encryption_mode_), padding_mode(padding_mode_),
-        init_vector(std::move(init_vector_)),
-        algorithm(std::move(algorithm_)) {};
+                key(std::move(key_)), encryption_mode(encryption_mode_),
+                init_vector(std::move(init_vector_)),
+                algorithm(std::move(algorithm_)) {};
 
         std::vector<std::byte> ECB_encrypt(const std::vector<std::byte>& data);
         std::vector<std::byte> ECB_decrypt(const std::vector<std::byte>& data);
@@ -98,21 +95,27 @@ namespace symmetric_context {
         std::vector<std::byte> RandomDelta_encrypt(const std::vector<std::byte>& data);
         std::vector<std::byte> RandomDelta_decrypt(const std::vector<std::byte>& data);
 
+        size_t get_block_size() { return algorithm->get_block_size(); }
+
     };
 
     class SymmetricContext {
     private:
         EncryptionMode encryption_mode;
+        PaddingMode padding_mode;
         std::vector<std::any> params;
         mutable std::mutex mutex;
 
+        std::vector<std::byte> apply_padding(const std::vector<std::byte>& data);
+        std::vector<std::byte> remove_padding(const std::vector<std::byte>& data);
+
     public:
         SymmetricContext(std::vector<std::byte> key_,
-                           EncryptionModes encryption_mode_,
-                           PaddingModes padding_mode_,
-                           std::optional<std::vector<std::byte>> init_vector_ = std::nullopt,
-                           std::vector<std::any> params_ = {},
-                           std::unique_ptr<SymmetricAlgorithm> algorithm_ = nullptr);
+                         EncryptionModes encryption_mode_,
+                         PaddingModes padding_mode_,
+                         std::optional<std::vector<std::byte>> init_vector_ = std::nullopt,
+                         std::vector<std::any> params_ = {},
+                         std::unique_ptr<SymmetricAlgorithm> algorithm_ = nullptr);
 
         ~SymmetricContext() = default;
 

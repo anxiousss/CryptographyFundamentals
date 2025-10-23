@@ -3,33 +3,66 @@
 namespace symmetric_context {
 
     SymmetricContext::SymmetricContext(std::vector<std::byte> key_,
-                                           EncryptionModes encryption_mode_,
-                                           PaddingModes padding_mode_,
-                                           std::optional<std::vector<std::byte>> init_vector_,
-                                           std::vector<std::any> params_,
-                                           std::unique_ptr<SymmetricAlgorithm> algorithm_)
-            : encryption_mode(std::move(key_), encryption_mode_, padding_mode_,
-                              std::move(init_vector_), std::move(algorithm_)),
+                                       EncryptionModes encryption_mode_,
+                                       PaddingModes padding_mode_,
+                                       std::optional<std::vector<std::byte>> init_vector_,
+                                       std::vector<std::any> params_,
+                                       std::unique_ptr<SymmetricAlgorithm> algorithm_)
+            : encryption_mode(std::move(key_), encryption_mode_, std::move(init_vector_), std::move(algorithm_)),
+              padding_mode(padding_mode_),
               params(std::move(params_)) {}
+
+    std::vector<std::byte> SymmetricContext::apply_padding(const std::vector<std::byte>& data) {
+        auto block_size = encryption_mode.get_block_size();
+        std::vector<std::byte> padded_data = data;
+        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+        padding_mode.padding(padded_data, required_size);
+        return padded_data;
+    }
+
+    std::vector<std::byte> SymmetricContext::remove_padding(const std::vector<std::byte>& data) {
+        std::vector<std::byte> unpadded_data = data;
+        padding_mode.remove_padding(unpadded_data);
+        return unpadded_data;
+    }
 
     std::future<std::vector<std::byte>> SymmetricContext::encrypt(const std::vector<std::byte>& data) {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
+            auto padded_data = apply_padding(data);
+
+            std::vector<std::byte> encrypted_data;
             switch (encryption_mode.encryption_mode) {
-                case EncryptionModes::ECB: return encryption_mode.ECB_encrypt(data);
-                case EncryptionModes::CBC: return encryption_mode.CBC_encrypt(data);
-                case EncryptionModes::PCBC: return encryption_mode.PCBC_encrypt(data);
-                case EncryptionModes::CFB: return encryption_mode.CFB_encrypt(data);
-                case EncryptionModes::OFB: return encryption_mode.OFB_encrypt(data);
-                case EncryptionModes::CTR: return encryption_mode.CTR_encrypt(data);
-                case EncryptionModes::RandomDelta: return encryption_mode.RandomDelta_encrypt(data);
-                default: throw std::runtime_error("Invalid encryption mode");
+                case EncryptionModes::ECB:
+                    encrypted_data = encryption_mode.ECB_encrypt(padded_data);
+                    break;
+                case EncryptionModes::CBC:
+                    encrypted_data = encryption_mode.CBC_encrypt(padded_data);
+                    break;
+                case EncryptionModes::PCBC:
+                    encrypted_data = encryption_mode.PCBC_encrypt(padded_data);
+                    break;
+                case EncryptionModes::CFB:
+                    encrypted_data = encryption_mode.CFB_encrypt(padded_data);
+                    break;
+                case EncryptionModes::OFB:
+                    encrypted_data = encryption_mode.OFB_encrypt(padded_data);
+                    break;
+                case EncryptionModes::CTR:
+                    encrypted_data = encryption_mode.CTR_encrypt(padded_data);
+                    break;
+                case EncryptionModes::RandomDelta:
+                    encrypted_data = encryption_mode.RandomDelta_encrypt(padded_data);
+                    break;
+                default:
+                    throw std::runtime_error("Invalid encryption mode");
             }
+            return encrypted_data;
         });
     }
 
     std::future<void> SymmetricContext::encrypt(const std::filesystem::path& input_file,
-                                                  std::optional<std::filesystem::path>& output_file) {
+                                                std::optional<std::filesystem::path>& output_file) {
         return std::async(std::launch::async, [this, input_file, output_file]() {
             std::lock_guard<std::mutex> lock(mutex);
 
@@ -67,28 +100,30 @@ namespace symmetric_context {
             std::vector<std::byte> file_data(file_size);
             in_file.read(reinterpret_cast<char*>(file_data.data()), file_size);
 
+            auto padded_data = apply_padding(file_data);
             std::vector<std::byte> encrypted_data;
+
             switch (encryption_mode.encryption_mode) {
                 case EncryptionModes::ECB:
-                    encrypted_data = encryption_mode.ECB_encrypt(file_data);
+                    encrypted_data = encryption_mode.ECB_encrypt(padded_data);
                     break;
                 case EncryptionModes::CBC:
-                    encrypted_data = encryption_mode.CBC_encrypt(file_data);
+                    encrypted_data = encryption_mode.CBC_encrypt(padded_data);
                     break;
                 case EncryptionModes::PCBC:
-                    encrypted_data = encryption_mode.PCBC_encrypt(file_data);
+                    encrypted_data = encryption_mode.PCBC_encrypt(padded_data);
                     break;
                 case EncryptionModes::CFB:
-                    encrypted_data = encryption_mode.CFB_encrypt(file_data);
+                    encrypted_data = encryption_mode.CFB_encrypt(padded_data);
                     break;
                 case EncryptionModes::OFB:
-                    encrypted_data = encryption_mode.OFB_encrypt(file_data);
+                    encrypted_data = encryption_mode.OFB_encrypt(padded_data);
                     break;
                 case EncryptionModes::CTR:
-                    encrypted_data = encryption_mode.CTR_encrypt(file_data);
+                    encrypted_data = encryption_mode.CTR_encrypt(padded_data);
                     break;
                 case EncryptionModes::RandomDelta:
-                    encrypted_data = encryption_mode.RandomDelta_encrypt(file_data);
+                    encrypted_data = encryption_mode.RandomDelta_encrypt(padded_data);
                     break;
                 default:
                     throw std::runtime_error("Unsupported encryption mode");
@@ -100,28 +135,46 @@ namespace symmetric_context {
             out_file.close();
 
             std::cout << "File encrypted: " << input_file << " -> " << actual_output_path << std::endl;
-
         });
     }
 
     std::future<std::vector<std::byte>> SymmetricContext::decrypt(const std::vector<std::byte>& data) {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
+            std::vector<std::byte> decrypted_data;
+
             switch (encryption_mode.encryption_mode) {
-                case EncryptionModes::ECB: return encryption_mode.ECB_decrypt(data);
-                case EncryptionModes::CBC: return encryption_mode.CBC_decrypt(data);
-                case EncryptionModes::PCBC: return encryption_mode.PCBC_decrypt(data);
-                case EncryptionModes::CFB: return encryption_mode.CFB_decrypt(data);
-                case EncryptionModes::OFB: return encryption_mode.OFB_decrypt(data);
-                case EncryptionModes::CTR: return encryption_mode.CTR_decrypt(data);
-                case EncryptionModes::RandomDelta: return encryption_mode.RandomDelta_decrypt(data);
-                default: throw std::runtime_error("Invalid encryption mode");
+                case EncryptionModes::ECB:
+                    decrypted_data = encryption_mode.ECB_decrypt(data);
+                    break;
+                case EncryptionModes::CBC:
+                    decrypted_data = encryption_mode.CBC_decrypt(data);
+                    break;
+                case EncryptionModes::PCBC:
+                    decrypted_data = encryption_mode.PCBC_decrypt(data);
+                    break;
+                case EncryptionModes::CFB:
+                    decrypted_data = encryption_mode.CFB_decrypt(data);
+                    break;
+                case EncryptionModes::OFB:
+                    decrypted_data = encryption_mode.OFB_decrypt(data);
+                    break;
+                case EncryptionModes::CTR:
+                    decrypted_data = encryption_mode.CTR_decrypt(data);
+                    break;
+                case EncryptionModes::RandomDelta:
+                    decrypted_data = encryption_mode.RandomDelta_decrypt(data);
+                    break;
+                default:
+                    throw std::runtime_error("Invalid encryption mode");
             }
+
+            return remove_padding(decrypted_data);
         });
     }
 
     std::future<void> SymmetricContext::decrypt(const std::filesystem::path& input_file,
-                                                  std::optional<std::filesystem::path>& output_file) {
+                                                std::optional<std::filesystem::path>& output_file) {
         return std::async(std::launch::async, [this, input_file, output_file]() {
             std::lock_guard<std::mutex> lock(mutex);
             if (!std::filesystem::exists(input_file)) {
@@ -140,7 +193,6 @@ namespace symmetric_context {
 
                 actual_output_path = input_file.parent_path() /
                                      (stem + "_decrypted" + input_file.extension().string());
-
             }
 
             auto output_dir = actual_output_path.parent_path();
@@ -189,13 +241,13 @@ namespace symmetric_context {
                     throw std::runtime_error("Unsupported encryption mode");
             }
 
-            out_file.write(reinterpret_cast<const char*>(decrypted_data.data()), decrypted_data.size());
+            auto unpadded_data = remove_padding(decrypted_data);
+            out_file.write(reinterpret_cast<const char*>(unpadded_data.data()), unpadded_data.size());
 
             in_file.close();
             out_file.close();
 
             std::cout << "File decrypted: " << input_file << " -> " << actual_output_path << std::endl;
-
         });
     }
 
@@ -273,13 +325,10 @@ namespace symmetric_context {
         }
     }
 
+
     std::vector<std::byte> EncryptionMode::ECB_encrypt(const std::vector<std::byte> &data) {
         auto block_size = this->algorithm->get_block_size();
-        std::vector<std::byte> new_data;
-
-        new_data = data;
-        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
-        padding_mode.padding(new_data, required_size);
+        std::vector<std::byte> new_data = data;
 
         std::vector<std::thread> threads;
         std::mutex result_mutex;
@@ -307,7 +356,6 @@ namespace symmetric_context {
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data = data;
 
-
         std::vector<std::thread> threads;
         std::mutex result_mutex;
 
@@ -317,7 +365,6 @@ namespace symmetric_context {
                 std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
                 std::vector<std::byte> processed_block;
-
                 processed_block = this->algorithm->decrypt(block);
 
                 std::lock_guard<std::mutex> lock(result_mutex);
@@ -329,7 +376,6 @@ namespace symmetric_context {
             t.join();
         }
 
-        padding_mode.remove_padding(new_data);
         return new_data;
     }
 
@@ -344,9 +390,6 @@ namespace symmetric_context {
         if (iv_copy.size() < block_size) {
             iv_copy.resize(block_size);
         }
-
-        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
-        padding_mode.padding(new_data, required_size);
 
         std::vector<std::byte> previous_block = iv_copy;
         for (size_t i = 0; i < new_data.size(); i += block_size) {
@@ -405,7 +448,6 @@ namespace symmetric_context {
                         std::min(block_size, decrypted_block.size())
                 );
 
-
                 std::lock_guard<std::mutex> lock(result_mutex);
                 std::copy(plain_block.begin(), plain_block.end(), new_data.begin() + i);
             });
@@ -415,7 +457,6 @@ namespace symmetric_context {
             t.join();
         }
 
-        padding_mode.remove_padding(new_data);
         return new_data;
     }
 
@@ -425,16 +466,12 @@ namespace symmetric_context {
         }
 
         auto block_size = this->algorithm->get_block_size();
-        std::vector<std::byte> new_data;
+        std::vector<std::byte> new_data = data;
         auto& iv = init_vector.value();
 
         if (iv.size() < block_size) {
             iv.resize(block_size);
         }
-
-        new_data = data;
-        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
-        padding_mode.padding(new_data, required_size);
 
         std::vector<std::byte> feedback = iv;
         for (size_t i = 0; i < new_data.size(); i += block_size) {
@@ -473,8 +510,6 @@ namespace symmetric_context {
             feedback = bits_functions::xor_vectors(block, plain_block, block.size());
         }
 
-        padding_mode.remove_padding(new_data);
-
         return new_data;
     }
 
@@ -484,17 +519,12 @@ namespace symmetric_context {
         }
 
         auto block_size = this->algorithm->get_block_size();
-        std::vector<std::byte> new_data;
+        std::vector<std::byte> new_data = data;
         auto iv_copy = init_vector.value();
 
         if (iv_copy.size() < block_size) {
             iv_copy.resize(block_size);
         }
-
-
-        new_data = data;
-        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
-        padding_mode.padding(new_data, required_size);
 
         std::vector<std::byte> feedback = iv_copy;
         for (size_t i = 0; i < new_data.size(); i += block_size) {
@@ -522,7 +552,6 @@ namespace symmetric_context {
             iv_copy.resize(block_size);
         }
 
-
         std::vector<std::thread> threads;
         std::mutex result_mutex;
 
@@ -553,7 +582,6 @@ namespace symmetric_context {
             t.join();
         }
 
-        padding_mode.remove_padding(new_data);
         return new_data;
     }
 
@@ -564,9 +592,6 @@ namespace symmetric_context {
 
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data = data;
-
-        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
-        padding_mode.padding(new_data, required_size);
 
         auto iv_copy = init_vector.value();
 
@@ -589,7 +614,7 @@ namespace symmetric_context {
 
     std::vector<std::byte> EncryptionMode::OFB_decrypt(const std::vector<std::byte> &data) {
         if (!init_vector.has_value()) {
-            throw std::runtime_error("Initialization vector is required for CFB mode");
+            throw std::runtime_error("Initialization vector is required for OFB mode");
         }
 
         auto block_size = this->algorithm->get_block_size();
@@ -630,7 +655,6 @@ namespace symmetric_context {
             t.join();
         }
 
-        padding_mode.remove_padding(new_data);
         return new_data;
     }
 
@@ -641,10 +665,6 @@ namespace symmetric_context {
 
         auto block_size = this->algorithm->get_block_size();
         std::vector<std::byte> new_data = data;
-
-        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
-        padding_mode.padding(new_data, required_size);
-
 
         auto& iv = init_vector.value();
         if (iv.size() < block_size) {
@@ -719,8 +739,6 @@ namespace symmetric_context {
             t.join();
         }
 
-        padding_mode.remove_padding(new_data);
-
         return new_data;
     }
 
@@ -730,12 +748,7 @@ namespace symmetric_context {
         }
 
         auto block_size = this->algorithm->get_block_size();
-        std::vector<std::byte> new_data;
-
-        new_data = data;
-        size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
-        padding_mode.padding(new_data, required_size);
-
+        std::vector<std::byte> new_data = data;
 
         auto iv_copy = init_vector.value();
         if (iv_copy.size() < block_size) {
@@ -790,12 +803,10 @@ namespace symmetric_context {
                 size_t end_index = std::min(i + block_size, new_data.size());
                 std::vector<std::byte> block(new_data.begin() + i, new_data.begin() + end_index);
 
-
                 std::vector<std::byte> processed_block = this->algorithm->decrypt(block);
                 std::vector<std::byte> xor_block = bits_functions::xor_vectors(current_iv, processed_block, block.size());
                 std::lock_guard<std::mutex> lock(result_mutex);
                 std::copy(xor_block.begin(), xor_block.end(), new_data.begin() + i);
-
             });
         }
 
@@ -803,10 +814,7 @@ namespace symmetric_context {
             t.join();
         }
 
-        padding_mode.remove_padding(new_data);
         return new_data;
     }
-
-
 
 }
