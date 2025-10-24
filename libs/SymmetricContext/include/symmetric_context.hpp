@@ -13,6 +13,8 @@
 #include <cassert>
 #include <fstream>
 #include <stdexcept>
+#include <atomic>
+#include <random>
 #include "bits_functions.hpp"
 
 namespace symmetric_context {
@@ -35,12 +37,34 @@ namespace symmetric_context {
     };
 
     class PaddingMode {
-    private:
-        PaddingModes mode;
     public:
-        PaddingMode(PaddingModes mode_): mode(mode_) {};
-        void padding(std::vector<std::byte>& data, size_t n_bytes);
-        void remove_padding(std::vector<std::byte>& data);
+        virtual ~PaddingMode() = default;
+        virtual void padding(std::vector<std::byte>& data, size_t n_bytes) = 0;
+        virtual void remove_padding(std::vector<std::byte>& data) = 0;
+    };
+
+    class ZerosPadding : public PaddingMode {
+    public:
+        void padding(std::vector<std::byte>& data, size_t target_size) override;
+        void remove_padding(std::vector<std::byte>& data) override;
+    };
+
+    class ANSIX923Padding : public PaddingMode {
+    public:
+        void padding(std::vector<std::byte>& data, size_t target_size) override;
+        void remove_padding(std::vector<std::byte>& data) override;
+    };
+
+    class PKCS7Padding : public PaddingMode {
+    public:
+        void padding(std::vector<std::byte>& data, size_t target_size) override;
+        void remove_padding(std::vector<std::byte>& data) override;
+    };
+
+    class ISO10126Padding : public PaddingMode {
+    public:
+        void padding(std::vector<std::byte>& data, size_t target_size) override;
+        void remove_padding(std::vector<std::byte>& data) override;
     };
 
     class RoundKeyGeneration {
@@ -66,43 +90,80 @@ namespace symmetric_context {
     };
 
     class EncryptionMode {
-    private:
+    protected:
         std::vector<std::byte> key;
         std::optional<std::vector<std::byte>> init_vector;
         std::unique_ptr<SymmetricAlgorithm> algorithm;
+
     public:
-        EncryptionModes encryption_mode;
+        EncryptionMode(std::vector<std::byte> key_,
+                       std::optional<std::vector<std::byte>> init_vector_,
+                       std::unique_ptr<SymmetricAlgorithm> algorithm_)
+                : key(std::move(key_))
+                , init_vector(std::move(init_vector_))
+                , algorithm(std::move(algorithm_)) {}
 
-        EncryptionMode(std::vector<std::byte> key_, EncryptionModes encryption_mode_,
-                       std::optional<std::vector<std::byte>> init_vector_ = std::nullopt,
-                       std::unique_ptr<SymmetricAlgorithm> algorithm_ = nullptr):
-                key(std::move(key_)), encryption_mode(encryption_mode_),
-                init_vector(std::move(init_vector_)),
-                algorithm(std::move(algorithm_)) {};
+        virtual ~EncryptionMode() = default;
 
-        std::vector<std::byte> ECB_encrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> ECB_decrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> CBC_encrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> CBC_decrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> PCBC_encrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> PCBC_decrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> CFB_encrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> CFB_decrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> OFB_encrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> OFB_decrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> CTR_encrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> CTR_decrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> RandomDelta_encrypt(const std::vector<std::byte>& data);
-        std::vector<std::byte> RandomDelta_decrypt(const std::vector<std::byte>& data);
+        virtual std::vector<std::byte> encrypt(const std::vector<std::byte>& data) = 0;
+        virtual std::vector<std::byte> decrypt(const std::vector<std::byte>& data) = 0;
 
         size_t get_block_size() { return algorithm->get_block_size(); }
+    };
 
+    class ECBEncryption : public EncryptionMode {
+    public:
+        using EncryptionMode::EncryptionMode;
+        std::vector<std::byte> encrypt(const std::vector<std::byte>& data) override;
+        std::vector<std::byte> decrypt(const std::vector<std::byte>& data) override;
+    };
+
+    class CBCEncryption : public EncryptionMode {
+    public:
+        using EncryptionMode::EncryptionMode;
+        std::vector<std::byte> encrypt(const std::vector<std::byte>& data) override;
+        std::vector<std::byte> decrypt(const std::vector<std::byte>& data) override;
+    };
+
+    class PCBCEncryption : public EncryptionMode {
+    public:
+        using EncryptionMode::EncryptionMode;
+        std::vector<std::byte> encrypt(const std::vector<std::byte>& data) override;
+        std::vector<std::byte> decrypt(const std::vector<std::byte>& data) override;
+    };
+
+    class CFBEncryption : public EncryptionMode {
+    public:
+        using EncryptionMode::EncryptionMode;
+        std::vector<std::byte> encrypt(const std::vector<std::byte>& data) override;
+        std::vector<std::byte> decrypt(const std::vector<std::byte>& data) override;
+    };
+
+    class OFBEncryption : public EncryptionMode {
+    public:
+        using EncryptionMode::EncryptionMode;
+        std::vector<std::byte> encrypt(const std::vector<std::byte>& data) override;
+        std::vector<std::byte> decrypt(const std::vector<std::byte>& data) override;
+    };
+
+    class CTREncryption : public EncryptionMode {
+    public:
+        using EncryptionMode::EncryptionMode;
+        std::vector<std::byte> encrypt(const std::vector<std::byte>& data) override;
+        std::vector<std::byte> decrypt(const std::vector<std::byte>& data) override;
+    };
+
+    class RandomDeltaEncryption : public EncryptionMode {
+    public:
+        using EncryptionMode::EncryptionMode;
+        std::vector<std::byte> encrypt(const std::vector<std::byte>& data) override;
+        std::vector<std::byte> decrypt(const std::vector<std::byte>& data) override;
     };
 
     class SymmetricContext {
     private:
-        EncryptionMode encryption_mode;
-        PaddingMode padding_mode;
+        std::unique_ptr<EncryptionMode> encryption_mode;
+        std::unique_ptr<PaddingMode> padding_mode;
         std::vector<std::any> params;
         mutable std::mutex mutex;
 
