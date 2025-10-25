@@ -95,8 +95,6 @@ namespace des {
                 }
         };
 
-        std::byte s_block_transformation(std::byte& b, size_t s_block_index);
-
 
     public:
         std::vector<std::byte> encrypt(const std::vector<std::byte> &block,

@@ -7,6 +7,7 @@ namespace feistel_network {
     class FeistelNetwork {
     private:
         std::vector<std::byte> key;
+        std::vector<std::vector<std::byte>> round_keys;
         size_t rounds;
         std::shared_ptr<symmetric_context::RoundKeyGeneration> round_key_generator;
         std::shared_ptr<symmetric_context::EncryptionTransformation> encryption_transformer;

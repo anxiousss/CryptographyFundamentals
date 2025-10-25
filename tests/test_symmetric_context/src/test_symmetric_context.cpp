@@ -575,7 +575,7 @@ void test_image_and_text_files(TestRunner& runner) {
         // win std::filesystem::path base_dir = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src";
         // wsl std::filesystem::path base_dir =  "/mnt/c/Users/анчоус/CLionProjects/CryptographyFundamentals/tests/test_symmetric_context/src"
         // win 2 std::filesystem::path base_dir = "C:\CryptographyFundamentals\tests\test_symmetric_context\src"
-        std::filesystem::path base_dir = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src";
+        std::filesystem::path base_dir = "C:\\CryptographyFundamentals\\tests\\test_symmetric_context\\src";
         std::filesystem::create_directories(base_dir);
 
         {
@@ -679,7 +679,7 @@ void test_image_and_text_files(TestRunner& runner) {
             // win path  std::filesystem::path img_path = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src\\SMILEFACE.jpg";
             // wsl path  std::filesystem::path img_path = "/mnt/c/Users/анчоус/CLionProjects/CryptographyFundamentals/tests/test_symmetric_context/src/SMILEFACE.jpg";
             // win 2 path std::filesystem::path img_path = "C:\CryptographyFundamentals\tests\test_symmetric_context\src\SMILEFACE.jpg"
-            std::filesystem::path img_path = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src\\SMILEFACE.jpg";
+            std::filesystem::path img_path = "C:\\CryptographyFundamentals\\tests\\test_symmetric_context\\src\\SMILEFACE.jpg";
             std::cout << "Testing img file encryption with DES" << std::endl;
 
             std::filesystem::path encrypted_img_path = base_dir / "encrypted_img_des.bin";

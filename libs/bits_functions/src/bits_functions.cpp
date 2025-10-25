@@ -184,9 +184,9 @@ namespace bits_functions {
         };
 
         for (size_t i = 0; i < E_TABLE.size(); ++i) {
-            int source_bit = E_TABLE[i] - 1; // Convert to 0-based
+            int source_bit = E_TABLE[i] - 1;
             int source_byte = source_bit / 8;
-            int source_bit_in_byte = 7 - (source_bit % 8); // MSB first
+            int source_bit_in_byte = 7 - (source_bit % 8);
 
             bool bit_value = (std::to_integer<uint8_t>(input_32bit[source_byte]) >> source_bit_in_byte) & 1;
 
@@ -206,9 +206,8 @@ namespace bits_functions {
             throw std::runtime_error("Input must be 6 bytes (48 bits)");
         }
 
-        std::vector<std::byte> output(8, std::byte{0}); // 8 blocks of 6 bits
+        std::vector<std::byte> output(8, std::byte{0});
 
-        // Extract 8 groups of 6 bits from 48-bit input
         for (int i = 0; i < 8; i++) {
             int start_bit = i * 6;
             uint8_t six_bits = 0;
@@ -216,7 +215,7 @@ namespace bits_functions {
             for (int j = 0; j < 6; j++) {
                 int bit_pos = start_bit + j;
                 int byte_idx = bit_pos / 8;
-                int bit_in_byte = 7 - (bit_pos % 8); // MSB first
+                int bit_in_byte = 7 - (bit_pos % 8);
 
                 bool bit = (std::to_integer<uint8_t>(input_48bit[byte_idx]) >> bit_in_byte) & 1;
                 six_bits = (six_bits << 1) | (bit ? 1 : 0);

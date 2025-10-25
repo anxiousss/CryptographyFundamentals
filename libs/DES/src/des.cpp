@@ -57,15 +57,6 @@ namespace des {
         return round_keys;
     }
 
-    std::byte FeistelTransformation::s_block_transformation(std::byte& input_byte, size_t s_block_index) {
-        uint8_t input = static_cast<uint8_t>(input_byte);
-
-        uint8_t row = ((input & 0x80) >> 6) | ((input & 0x04) >> 2);
-        uint8_t col = (input & 0x78) >> 3;
-        uint8_t value = S_BLOCKS[s_block_index][row][col];
-        return static_cast<std::byte>(value);
-    }
-
     std::vector<std::byte> FeistelTransformation::encrypt(const std::vector<std::byte> &block,
                                                           const std::vector<std::byte> &round_key) {
         if (block.size() != 4 || round_key.size() != 6) {
@@ -91,9 +82,7 @@ namespace des {
             s_box_output[output_byte] |= std::byte(s_box_value) << output_shift;
         }
 
-        auto result = bits_functions::bits_permutation(s_box_output, P_BLOCK, bits_functions::PermutationRule::ELDEST_ONE_BASED);
-
-        return result;
+        return bits_functions::bits_permutation(s_box_output, P_BLOCK, bits_functions::PermutationRule::ELDEST_ONE_BASED);
     }
 
     DES::DES(const std::vector<std::byte> &key_, std::shared_ptr<DesRoundKeyGeneration> des_round_key_generation,
@@ -108,15 +97,13 @@ namespace des {
     std::vector<std::byte> DES::encrypt(const std::vector<std::byte> &block) {
         auto IP_permutaion= bits_functions::bits_permutation(block, IP, bits_functions::PermutationRule::ELDEST_ONE_BASED);
         auto cycle_block = feistel_network.encrypt(IP_permutaion);
-        auto result = bits_functions::bits_permutation(cycle_block, IP_INV, bits_functions::PermutationRule::ELDEST_ONE_BASED);
-        return result;
+        return bits_functions::bits_permutation(cycle_block, IP_INV, bits_functions::PermutationRule::ELDEST_ONE_BASED);
     }
 
     std::vector<std::byte> DES::decrypt(const std::vector<std::byte> &block) {
         auto IP_permutaion= bits_functions::bits_permutation(block, IP, bits_functions::PermutationRule::ELDEST_ONE_BASED);
         auto cycle_block = feistel_network.decrypt(IP_permutaion);
-        auto res = bits_functions::bits_permutation(cycle_block, IP_INV, bits_functions::PermutationRule::ELDEST_ONE_BASED);
-        return res;
+        return bits_functions::bits_permutation(cycle_block, IP_INV, bits_functions::PermutationRule::ELDEST_ONE_BASED);
     }
 
     size_t DES::get_block_size() {
