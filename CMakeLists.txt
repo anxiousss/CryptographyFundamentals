@@ -9,12 +9,13 @@ add_subdirectory(libs/bits_functions)
 add_subdirectory(libs/SymmetricContext)
 add_subdirectory(libs/FeistelNetwork)
 add_subdirectory(libs/DES)
+add_subdirectory(libs/DEAL)
 add_subdirectory(tests/test_bits_functions)
 add_subdirectory(tests/test_symmetric_context)
 
 
 add_executable(lab1t1 "lab 1/ex1.cpp")
-add_executable(lab1t2-t5 "lab 1/ex2-5.cpp")
+add_executable(lab1t2-t7 "lab 1/ex2-7.cpp")
 
 target_link_libraries(lab1t1 test_bits_functions bits_functions)
-target_link_libraries(lab1t2-t5 test_symmetric_context symmetric_context feistel_network des)
+target_link_libraries(lab1t2-t7 test_symmetric_context symmetric_context feistel_network des deal)
