@@ -13,7 +13,14 @@ namespace deal {
                                       std::byte{0xCD},
                                       std::byte{0xEF}};
     class DealRoundKeyGeneration: public symmetric_context::RoundKeyGeneration {
+        std::vector<std::byte> magic_64bit_number(unsigned int i);
         std::vector<std::vector<std::byte>> key_extension(const std::vector<std::byte> &key, size_t rounds) override;
+    };
+
+    class DesTransformation: public symmetric_context::EncryptionTransformation {
+    public:
+        std::vector<std::byte> encrypt(const std::vector<std::byte> &block,
+                                       const std::vector<std::byte> &round_key) override;
     };
 
     class DEAL: public symmetric_context::SymmetricAlgorithm {
