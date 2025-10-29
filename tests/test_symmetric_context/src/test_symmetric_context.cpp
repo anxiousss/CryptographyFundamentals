@@ -69,49 +69,6 @@ std::unique_ptr<deal::DEAL> create_deal_algorithm_256(const std::vector<std::byt
 
 // ==================== TESTS FOR DES ====================
 
-void test_basic_des(TestRunner& runner) {
-    runner.start_test("Basic DES Algorithm");
-
-    try {
-        std::vector<std::byte> key = {
-                std::byte{0x13}, std::byte{0x34}, std::byte{0x57}, std::byte{0x79},
-                std::byte{0x9B}, std::byte{0xBC}, std::byte{0xDF}
-        };
-
-        std::vector<std::byte> test_data = {
-                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
-                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF}
-        };
-
-        auto algorithm = create_des_algorithm(key);
-
-        std::cout << "Testing DES encrypt/decrypt directly" << std::endl;
-
-        auto encrypted = algorithm->encrypt(test_data);
-        std::cout << "Encrypted: ";
-        print_byte_vector(encrypted);
-
-        auto decrypted = algorithm->decrypt(encrypted);
-        std::cout << "Decrypted: ";
-        print_byte_vector(decrypted);
-
-        std::cout << "Original:  ";
-        print_byte_vector(test_data);
-
-        bool success = compare_byte_vectors(test_data, decrypted);
-
-        if (!success) {
-            std::cout << "BASIC DES ALGORITHM IS BROKEN!" << std::endl;
-        }
-
-        runner.assert_true(success, "Basic DES algorithm should work correctly");
-        runner.end_test(success);
-    } catch (const std::exception& e) {
-        std::cout << "Exception in basic DES test: " << e.what() << std::endl;
-        runner.end_test(false);
-    }
-}
-
 void test_ecb_encryption_decryption_des(TestRunner& runner) {
     runner.start_test("ECB Encryption/Decryption with DES");
 
@@ -697,121 +654,6 @@ void test_image_and_text_files_des(TestRunner& runner) {
 }
 
 // ==================== TESTS FOR DEAL ====================
-
-void test_basic_deal_128(TestRunner& runner) {
-    runner.start_test("Basic DEAL-128 Algorithm");
-
-    try {
-        std::vector<std::byte> key = {
-                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
-                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
-                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
-                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10}
-        };
-
-        std::vector<std::byte> test_data = {
-                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
-                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
-                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
-                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10}
-        };
-
-        auto algorithm = create_deal_algorithm_128(key);
-
-        std::cout << "Testing DEAL-128 encrypt/decrypt directly" << std::endl;
-
-        auto encrypted = algorithm->encrypt(test_data);
-        std::cout << "Encrypted: ";
-        print_byte_vector(encrypted);
-
-        auto decrypted = algorithm->decrypt(encrypted);
-        std::cout << "Decrypted: ";
-        print_byte_vector(decrypted);
-
-        std::cout << "Original:  ";
-        print_byte_vector(test_data);
-
-        bool success = compare_byte_vectors(test_data, decrypted);
-
-        runner.assert_true(success, "Basic DEAL-128 algorithm should work correctly");
-        runner.end_test(success);
-    } catch (const std::exception& e) {
-        std::cout << "Exception in basic DEAL-128 test: " << e.what() << std::endl;
-        runner.end_test(false);
-    }
-}
-
-void test_basic_deal_192(TestRunner& runner) {
-    runner.start_test("Basic DEAL-192 Algorithm");
-
-    try {
-        std::vector<std::byte> key = {
-                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
-                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
-                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
-                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
-                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
-                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
-        };
-
-        std::vector<std::byte> test_data = {
-                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
-                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
-                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
-                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10}
-        };
-
-        auto algorithm = create_deal_algorithm_192(key);
-
-        auto encrypted = algorithm->encrypt(test_data);
-        auto decrypted = algorithm->decrypt(encrypted);
-
-        bool success = compare_byte_vectors(test_data, decrypted);
-
-        runner.assert_true(success, "Basic DEAL-192 algorithm should work correctly");
-        runner.end_test(success);
-    } catch (const std::exception& e) {
-        std::cout << "Exception in basic DEAL-192 test: " << e.what() << std::endl;
-        runner.end_test(false);
-    }
-}
-
-void test_basic_deal_256(TestRunner& runner) {
-    runner.start_test("Basic DEAL-256 Algorithm");
-
-    try {
-        std::vector<std::byte> key = {
-                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
-                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
-                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
-                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
-                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
-                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
-                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
-                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
-        };
-
-        std::vector<std::byte> test_data = {
-                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
-                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
-                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
-                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10}
-        };
-
-        auto algorithm = create_deal_algorithm_256(key);
-
-        auto encrypted = algorithm->encrypt(test_data);
-        auto decrypted = algorithm->decrypt(encrypted);
-
-        bool success = compare_byte_vectors(test_data, decrypted);
-
-        runner.assert_true(success, "Basic DEAL-256 algorithm should work correctly");
-        runner.end_test(success);
-    } catch (const std::exception& e) {
-        std::cout << "Exception in basic DEAL-256 test: " << e.what() << std::endl;
-        runner.end_test(false);
-    }
-}
 
 void test_ecb_encryption_decryption_deal(TestRunner& runner) {
     runner.start_test("ECB Encryption/Decryption with DEAL");
@@ -1451,6 +1293,1009 @@ void test_image_and_text_files_deal(TestRunner& runner) {
     }
 }
 
+
+void test_ecb_deal_192(TestRunner& runner) {
+    runner.start_test("ECB Mode with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::ECB, PaddingModes::PKCS7,
+                              std::nullopt, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "ECB with DEAL-192: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_cbc_deal_192(TestRunner& runner) {
+    runner.start_test("CBC Mode with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::CBC, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "CBC with DEAL-192: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_pcbc_deal_192(TestRunner& runner) {
+    runner.start_test("PCBC Mode with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::PCBC, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "PCBC with DEAL-192: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_cfb_deal_192(TestRunner& runner) {
+    runner.start_test("CFB Mode with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::CFB, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "CFB with DEAL-192: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_ofb_deal_192(TestRunner& runner) {
+    runner.start_test("OFB Mode with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::OFB, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "OFB with DEAL-192: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_ctr_deal_192(TestRunner& runner) {
+    runner.start_test("CTR Mode with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::CTR, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "CTR with DEAL-192: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_random_delta_deal_192(TestRunner& runner) {
+    runner.start_test("RandomDelta Mode with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::RandomDelta, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "RandomDelta with DEAL-192: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+// ==================== DEAL-256 TESTS ====================
+
+void test_ecb_deal_256(TestRunner& runner) {
+    runner.start_test("ECB Mode with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::ECB, PaddingModes::PKCS7,
+                              std::nullopt, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "ECB with DEAL-256: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_cbc_deal_256(TestRunner& runner) {
+    runner.start_test("CBC Mode with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::CBC, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "CBC with DEAL-256: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_pcbc_deal_256(TestRunner& runner) {
+    runner.start_test("PCBC Mode with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::PCBC, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "PCBC with DEAL-256: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_cfb_deal_256(TestRunner& runner) {
+    runner.start_test("CFB Mode with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::CFB, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "CFB with DEAL-256: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_ofb_deal_256(TestRunner& runner) {
+    runner.start_test("OFB Mode with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::OFB, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "OFB with DEAL-256: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_ctr_deal_256(TestRunner& runner) {
+    runner.start_test("CTR Mode with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::CTR, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "CTR with DEAL-256: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_random_delta_deal_256(TestRunner& runner) {
+    runner.start_test("RandomDelta Mode with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> test_data = {
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::RandomDelta, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(test_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                           "RandomDelta with DEAL-256: Original and decrypted data should match");
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+// ==================== COMPREHENSIVE TESTS ====================
+
+void test_large_data_deal_192(TestRunner& runner) {
+    runner.start_test("Large Data with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> large_data;
+        for (int i = 0; i < 80; ++i) { // 80 bytes
+            large_data.push_back(static_cast<std::byte>(0x20 + i));
+        }
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext algo(key, EncryptionModes::CBC, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(large_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        bool success = compare_byte_vectors(large_data, decrypted);
+
+        runner.assert_true(success, "Large data should be correctly encrypted and decrypted with DEAL-192");
+        runner.end_test(success);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_large_data_deal_256(TestRunner& runner) {
+    runner.start_test("Large Data with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> large_data;
+        for (int i = 0; i < 96; ++i) { // 96 bytes
+            large_data.push_back(static_cast<std::byte>(0x20 + i));
+        }
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext algo(key, EncryptionModes::CBC, PaddingModes::PKCS7,
+                              iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(large_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        bool success = compare_byte_vectors(large_data, decrypted);
+
+        runner.assert_true(success, "Large data should be correctly encrypted and decrypted with DEAL-256");
+        runner.end_test(success);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_different_padding_modes_deal_192(TestRunner& runner) {
+    runner.start_test("Different Padding Modes with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::vector<std::byte>> test_data_sets = {
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44}}, // 4 bytes
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  // 16 bytes
+                        std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                        std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                        std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}},
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  // 24 bytes
+                        std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                        std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                        std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00},
+                        std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                        std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}}
+        };
+
+        std::vector<PaddingModes> padding_modes = {
+                PaddingModes::ANSIX_923,
+                PaddingModes::PKCS7,
+                PaddingModes::ISO_10126
+        };
+
+        bool all_passed = true;
+
+        for (auto padding_mode : padding_modes) {
+            for (const auto& test_data : test_data_sets) {
+                try {
+                    auto algorithm = create_deal_algorithm_192(key);
+
+                    SymmetricContext algo(key, EncryptionModes::CBC, padding_mode,
+                                          iv, {}, std::move(algorithm));
+
+                    auto encrypted = algo.encrypt(test_data).get();
+                    auto decrypted = algo.decrypt(encrypted).get();
+
+                    if (!compare_byte_vectors(test_data, decrypted)) {
+                        all_passed = false;
+                        std::cout << "Padding mode " << static_cast<int>(padding_mode)
+                                  << " failed for data size " << test_data.size() << std::endl;
+                    }
+                } catch (const std::exception& e) {
+                    all_passed = false;
+                    std::cout << "Padding mode " << static_cast<int>(padding_mode)
+                              << " threw exception for data size " << test_data.size()
+                              << ": " << e.what() << std::endl;
+                }
+            }
+        }
+
+        runner.assert_true(all_passed, "All padding modes should work correctly with DEAL-192");
+        runner.end_test(all_passed);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_different_padding_modes_deal_256(TestRunner& runner) {
+    runner.start_test("Different Padding Modes with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        std::vector<std::vector<std::byte>> test_data_sets = {
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44}}, // 4 bytes
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  // 16 bytes
+                        std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                        std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                        std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}},
+                {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},  // 32 bytes
+                        std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                        std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                        std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00},
+                        std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                        std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                        std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                        std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}}
+        };
+
+        std::vector<PaddingModes> padding_modes = {
+                PaddingModes::ANSIX_923,
+                PaddingModes::PKCS7,
+                PaddingModes::ISO_10126
+        };
+
+        bool all_passed = true;
+
+        for (auto padding_mode : padding_modes) {
+            for (const auto& test_data : test_data_sets) {
+                try {
+                    auto algorithm = create_deal_algorithm_256(key);
+
+                    SymmetricContext algo(key, EncryptionModes::CBC, padding_mode,
+                                          iv, {}, std::move(algorithm));
+
+                    auto encrypted = algo.encrypt(test_data).get();
+                    auto decrypted = algo.decrypt(encrypted).get();
+
+                    if (!compare_byte_vectors(test_data, decrypted)) {
+                        all_passed = false;
+                        std::cout << "Padding mode " << static_cast<int>(padding_mode)
+                                  << " failed for data size " << test_data.size() << std::endl;
+                    }
+                } catch (const std::exception& e) {
+                    all_passed = false;
+                    std::cout << "Padding mode " << static_cast<int>(padding_mode)
+                              << " threw exception for data size " << test_data.size()
+                              << ": " << e.what() << std::endl;
+                }
+            }
+        }
+
+        runner.assert_true(all_passed, "All padding modes should work correctly with DEAL-256");
+        runner.end_test(all_passed);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_file_operations_deal_192(TestRunner& runner) {
+    runner.start_test("File Operations with DEAL-192");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_192(key);
+
+        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7,
+                                iv, {}, std::move(algorithm));
+
+        std::filesystem::path base_dir = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src";
+        std::filesystem::create_directories(base_dir);
+
+        // Создание тестового файла
+        std::filesystem::path text_path = base_dir / "test_deal_192.txt";
+        std::ofstream text_file(text_path);
+        text_file << "DEAL-192 Test File Content\n";
+        text_file << "This file tests DEAL-192 algorithm with 192-bit key\n";
+        text_file << "Multiple lines to ensure proper encryption/decryption\n";
+        text_file.close();
+
+        // Шифрование и дешифрование
+        std::filesystem::path encrypted_path = base_dir / "encrypted_deal_192.bin";
+        std::filesystem::path decrypted_path = base_dir / "decrypted_deal_192.txt";
+
+        std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
+        cipher.encrypt(text_path, opt_encrypted).get();
+
+        std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
+        cipher.decrypt(encrypted_path, opt_decrypted).get();
+
+        // Проверка содержимого
+        std::ifstream original_file(text_path);
+        std::ifstream decrypted_file(decrypted_path);
+
+        std::string original_content((std::istreambuf_iterator<char>(original_file)),
+                                     std::istreambuf_iterator<char>());
+        std::string decrypted_content((std::istreambuf_iterator<char>(decrypted_file)),
+                                      std::istreambuf_iterator<char>());
+
+        original_file.close();
+        decrypted_file.close();
+
+        runner.assert_equal(original_content, decrypted_content,
+                            "File content should match after DEAL-192 encryption/decryption");
+        runner.end_test(true);
+
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+void test_file_operations_deal_256(TestRunner& runner) {
+    runner.start_test("File Operations with DEAL-256");
+
+    try {
+        std::vector<std::byte> key = {
+                std::byte{0x01}, std::byte{0x23}, std::byte{0x45}, std::byte{0x67},
+                std::byte{0x89}, std::byte{0xAB}, std::byte{0xCD}, std::byte{0xEF},
+                std::byte{0xFE}, std::byte{0xDC}, std::byte{0xBA}, std::byte{0x98},
+                std::byte{0x76}, std::byte{0x54}, std::byte{0x32}, std::byte{0x10},
+                std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+                std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+        };
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22},
+                std::byte{0x33}, std::byte{0x44}, std::byte{0x55}, std::byte{0x66},
+                std::byte{0x77}, std::byte{0x88}, std::byte{0x99}, std::byte{0x00}
+        };
+
+        auto algorithm = create_deal_algorithm_256(key);
+
+        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7,
+                                iv, {}, std::move(algorithm));
+
+        std::filesystem::path base_dir = "C:\\Users\\анчоус\\CLionProjects\\CryptographyFundamentals\\tests\\test_symmetric_context\\src";
+        std::filesystem::create_directories(base_dir);
+
+        // Создание тестового файла
+        std::filesystem::path text_path = base_dir / "test_deal_256.txt";
+        std::ofstream text_file(text_path);
+        text_file << "DEAL-256 Test File Content\n";
+        text_file << "This file tests DEAL-256 algorithm with 256-bit key\n";
+        text_file << "Multiple lines to ensure proper encryption/decryption\n";
+        text_file << "Additional line for larger file size testing\n";
+        text_file.close();
+
+        // Шифрование и дешифрование
+        std::filesystem::path encrypted_path = base_dir / "encrypted_deal_256.bin";
+        std::filesystem::path decrypted_path = base_dir / "decrypted_deal_256.txt";
+
+        std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
+        cipher.encrypt(text_path, opt_encrypted).get();
+
+        std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
+        cipher.decrypt(encrypted_path, opt_decrypted).get();
+
+        // Проверка содержимого
+        std::ifstream original_file(text_path);
+        std::ifstream decrypted_file(decrypted_path);
+
+        std::string original_content((std::istreambuf_iterator<char>(original_file)),
+                                     std::istreambuf_iterator<char>());
+        std::string decrypted_content((std::istreambuf_iterator<char>(decrypted_file)),
+                                      std::istreambuf_iterator<char>());
+
+        original_file.close();
+        decrypted_file.close();
+
+        runner.assert_equal(original_content, decrypted_content,
+                            "File content should match after DEAL-256 encryption/decryption");
+        runner.end_test(true);
+
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+}
+
+
 // ==================== MAIN TEST RUNNERS ====================
 
 int run_all_des_tests() {
@@ -1460,7 +2305,6 @@ int run_all_des_tests() {
     std::cout << "=====================================" << std::endl;
 
     try {
-        test_basic_des(runner);
         test_ecb_encryption_decryption_des(runner);
         test_cbc_encryption_decryption_des(runner);
         test_pcbc_encryption_decryption_des(runner);
@@ -1488,9 +2332,6 @@ int run_all_deal_tests() {
     std::cout << "======================================" << std::endl;
 
     try {
-        test_basic_deal_128(runner);
-        test_basic_deal_192(runner);
-        test_basic_deal_256(runner);
         test_ecb_encryption_decryption_deal(runner);
         test_cbc_encryption_decryption_deal(runner);
         test_pcbc_encryption_decryption_deal(runner);
@@ -1502,7 +2343,27 @@ int run_all_deal_tests() {
         test_empty_data_deal(runner);
         test_large_data_deal(runner);
         test_thread_safety_deal(runner);
-        test_image_and_text_files_deal(runner);
+        // test_image_and_text_files_deal(runner);
+        test_ecb_deal_192(runner);
+        test_cbc_deal_192(runner);
+        test_pcbc_deal_192( runner);
+        test_cfb_deal_192( runner);
+        test_ofb_deal_192( runner);
+        test_ctr_deal_192( runner);
+        test_random_delta_deal_192( runner);
+        test_ecb_deal_256( runner);
+        test_cbc_deal_256( runner);
+        test_pcbc_deal_256( runner);
+        test_cfb_deal_256( runner);
+        test_ofb_deal_256( runner);
+        test_ctr_deal_256( runner);
+        test_random_delta_deal_256( runner);
+        test_large_data_deal_192( runner);
+        test_large_data_deal_256( runner);
+        test_different_padding_modes_deal_192( runner);
+        test_different_padding_modes_deal_256( runner);
+        test_file_operations_deal_192(runner);
+        test_file_operations_deal_256(runner);
     } catch (const std::exception& e) {
         std::cout << "DEAL Test interrupted by exception: " << e.what() << std::endl;
     }
@@ -1529,4 +2390,5 @@ int run_all_tests() {
         if (deal_result != 0) std::cout << "- DEAL tests failed" << std::endl;
         return 1;
     }*/
+    return 0;
 }

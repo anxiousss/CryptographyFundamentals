@@ -51,7 +51,6 @@ std::unique_ptr<deal::DEAL> create_deal_algorithm_128(const std::vector<std::byt
 std::unique_ptr<deal::DEAL> create_deal_algorithm_192(const std::vector<std::byte>& key);
 std::unique_ptr<deal::DEAL> create_deal_algorithm_256(const std::vector<std::byte>& key);
 
-void test_basic_des(TestRunner& runner);
 void test_ecb_encryption_decryption_des(TestRunner& runner);
 void test_cbc_encryption_decryption_des(TestRunner& runner);
 void test_pcbc_encryption_decryption_des(TestRunner& runner);
@@ -65,9 +64,6 @@ void test_large_data_des(TestRunner& runner);
 void test_thread_safety_des(TestRunner& runner);
 void test_image_and_text_files_des(TestRunner& runner);
 
-void test_basic_deal_128(TestRunner& runner);
-void test_basic_deal_192(TestRunner& runner);
-void test_basic_deal_256(TestRunner& runner);
 void test_ecb_encryption_decryption_deal(TestRunner& runner);
 void test_cbc_encryption_decryption_deal(TestRunner& runner);
 void test_pcbc_encryption_decryption_deal(TestRunner& runner);
@@ -80,6 +76,32 @@ void test_empty_data_deal(TestRunner& runner);
 void test_large_data_deal(TestRunner& runner);
 void test_thread_safety_deal(TestRunner& runner);
 void test_image_and_text_files_deal(TestRunner& runner);
+
+// Тесты для DEAL-192 на разных режимах
+void test_ecb_deal_192(TestRunner& runner);
+void test_cbc_deal_192(TestRunner& runner);
+void test_pcbc_deal_192(TestRunner& runner);
+void test_cfb_deal_192(TestRunner& runner);
+void test_ofb_deal_192(TestRunner& runner);
+void test_ctr_deal_192(TestRunner& runner);
+void test_random_delta_deal_192(TestRunner& runner);
+
+// Тесты для DEAL-256 на разных режимах
+void test_ecb_deal_256(TestRunner& runner);
+void test_cbc_deal_256(TestRunner& runner);
+void test_pcbc_deal_256(TestRunner& runner);
+void test_cfb_deal_256(TestRunner& runner);
+void test_ofb_deal_256(TestRunner& runner);
+void test_ctr_deal_256(TestRunner& runner);
+void test_random_delta_deal_256(TestRunner& runner);
+
+// Комплексные тесты для DEAL-192 и DEAL-256
+void test_large_data_deal_192(TestRunner& runner);
+void test_large_data_deal_256(TestRunner& runner);
+void test_different_padding_modes_deal_192(TestRunner& runner);
+void test_different_padding_modes_deal_256(TestRunner& runner);
+void test_file_operations_deal_192(TestRunner& runner);
+void test_file_operations_deal_256(TestRunner& runner);
 
 int run_all_des_tests();
 int run_all_deal_tests();

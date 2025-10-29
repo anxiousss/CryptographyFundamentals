@@ -5,17 +5,22 @@ set(CMAKE_CXX_STANDARD 20)
 # Disable C++ modules TS to fix dependency scanning issues
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
+include_directories("C:/local/boost_1_89_0")
+
 add_subdirectory(libs/bits_functions)
 add_subdirectory(libs/SymmetricContext)
 add_subdirectory(libs/FeistelNetwork)
 add_subdirectory(libs/DES)
 add_subdirectory(libs/DEAL)
+add_subdirectory(libs/NumberFuntions)
 add_subdirectory(tests/test_bits_functions)
 add_subdirectory(tests/test_symmetric_context)
 
 
 add_executable(lab1t1 "lab 1/ex1.cpp")
 add_executable(lab1t2-t7 "lab 1/ex2-7.cpp")
+add_executable(lab2t1 "lab 2/ex1.cpp")
 
 target_link_libraries(lab1t1 test_bits_functions bits_functions)
 target_link_libraries(lab1t2-t7 test_symmetric_context symmetric_context feistel_network des deal)
+target_link_libraries(lab2t1 number_functions)
