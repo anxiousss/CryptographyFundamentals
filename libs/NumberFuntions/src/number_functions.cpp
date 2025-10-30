@@ -34,7 +34,32 @@ namespace number_functions {
                 return std::make_tuple(r0, x0, y0);
             }
         }
+     }
 
+    boost::multiprecision::cpp_int mod_exp(const boost::multiprecision::cpp_int &base,
+                                                  const boost::multiprecision::cpp_int &exp,
+                                                  const boost::multiprecision::cpp_int &mod) {
+        auto res = base, deg = exp;
+        while (deg != 1) {
+            if ((deg & 1) == 1) {
+                res *= res % mod;
+            }
+            res *= res;
+            deg >>= 1;
+        }
+        return res;
+     }
+
+    boost::multiprecision::cpp_int legendre_symbol(const boost::multiprecision::cpp_int &a,
+                                                   const boost::multiprecision::cpp_int &b) {
+
+     }
+
+    boost::multiprecision::cpp_int jacobi_symbol(const boost::multiprecision::cpp_int &a,
+                                                 const boost::multiprecision::cpp_int &p) {
+         if (a % p == 0) {
+             return 0;
+         }
 
      }
 }
