@@ -143,6 +143,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> SymmetricContext::apply_padding(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         auto block_size = encryption_mode->get_block_size();
         std::vector<std::byte> padded_data = data;
         size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
@@ -151,6 +153,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> SymmetricContext::remove_padding(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         std::vector<std::byte> unpadded_data = data;
         padding_mode->remove_padding(unpadded_data);
         return unpadded_data;
@@ -159,6 +163,8 @@ namespace symmetric_context {
     std::future<std::vector<std::byte>> SymmetricContext::encrypt(const std::vector<std::byte>& data) {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
+            if (data.empty()) return data;
+
             auto padded_data = apply_padding(data);
             return encryption_mode->encrypt(padded_data);
         });
@@ -192,6 +198,11 @@ namespace symmetric_context {
             size_t file_size = in_file.tellg();
             in_file.seekg(0, std::ios::beg);
 
+            if (file_size == 0) {
+                std::cout << "Input file is empty: " << input_file << std::endl;
+                return;
+            }
+
             std::vector<std::byte> file_data(file_size);
             in_file.read(reinterpret_cast<char*>(file_data.data()), file_size);
 
@@ -206,6 +217,8 @@ namespace symmetric_context {
     std::future<std::vector<std::byte>> SymmetricContext::decrypt(const std::vector<std::byte>& data) {
         return std::async(std::launch::async, [this, data]() -> std::vector<std::byte> {
             std::lock_guard<std::mutex> lock(mutex);
+            if (data.empty()) return data;
+
             auto decrypted_data = encryption_mode->decrypt(data);
             return remove_padding(decrypted_data);
         });
@@ -240,6 +253,11 @@ namespace symmetric_context {
             size_t file_size = in_file.tellg();
             in_file.seekg(0, std::ios::beg);
 
+            if (file_size == 0) {
+                std::cout << "Input file is empty: " << input_file << std::endl;
+                return;
+            }
+
             std::vector<std::byte> encrypted_data(file_size);
             in_file.read(reinterpret_cast<char*>(encrypted_data.data()), file_size);
 
@@ -251,52 +269,89 @@ namespace symmetric_context {
         });
     }
 
-
     std::vector<std::byte> ECBEncryption::encrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
 
+        const size_t num_blocks = data.size() / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
+
         std::vector<std::thread> threads;
-        std::mutex result_mutex;
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
 
-        for (size_t i = 0; i < result.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                size_t end_index = std::min(i + block_size, result.size());
-                std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
-                auto processed_block = algorithm->encrypt(block);
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+            threads.emplace_back([&, start_block, end_block, block_size]() {
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = i + block_size;
+                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+                    auto processed_block = algorithm->encrypt(block);
+                    std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();
+
         return result;
     }
 
     std::vector<std::byte> ECBEncryption::decrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
 
+        const size_t num_blocks = data.size() / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
+
         std::vector<std::thread> threads;
-        std::mutex result_mutex;
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
 
-        for (size_t i = 0; i < result.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                size_t end_index = std::min(i + block_size, result.size());
-                std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
-                auto processed_block = algorithm->decrypt(block);
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+            threads.emplace_back([&, start_block, end_block, block_size]() {
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = i + block_size;
+                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+                    auto processed_block = algorithm->decrypt(block);
+                    std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();
+
         return result;
     }
 
     std::vector<std::byte> CBCEncryption::encrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) {
             throw std::runtime_error("Initialization vector is required for CBC mode");
         }
@@ -319,6 +374,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> CBCEncryption::decrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) {
             throw std::runtime_error("Initialization vector is required for CBC mode");
         }
@@ -328,24 +385,55 @@ namespace symmetric_context {
         auto iv = init_vector.value();
         if (iv.size() < block_size) iv.resize(block_size);
 
+        const size_t num_blocks = data.size() / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
+
         std::vector<std::thread> threads;
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
+
         std::mutex result_mutex;
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-        for (size_t i = 0; i < data.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                size_t end_index = std::min(i + block_size, data.size());
-                std::vector<std::byte> encrypted_block(data.begin() + i, data.begin() + end_index);
+            threads.emplace_back([&, start_block, end_block, block_size, iv]() {
+                std::vector<std::byte> local_prev_block;
 
-                std::vector<std::byte> previous_block;
-                if (i == 0) previous_block = iv;
-                else previous_block = std::vector<std::byte>(data.begin() + (i - block_size), data.begin() + i);
+                if (start_block == 0) {
+                    local_prev_block = iv;
+                } else {
+                    size_t prev_block_idx = start_block - 1;
+                    size_t prev_index = prev_block_idx * block_size;
+                    local_prev_block = std::vector<std::byte>(
+                            data.begin() + prev_index,
+                            data.begin() + prev_index + block_size
+                    );
+                }
 
-                auto decrypted_block = algorithm->decrypt(encrypted_block);
-                auto plain_block = bits_functions::xor_vectors(decrypted_block, previous_block, block_size);
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = i + block_size;
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(plain_block.begin(), plain_block.end(), result.begin() + i);
+                    std::vector<std::byte> encrypted_block(data.begin() + i, data.begin() + end_index);
+                    auto decrypted_block = algorithm->decrypt(encrypted_block);
+                    auto plain_block = bits_functions::xor_vectors(decrypted_block, local_prev_block, block_size);
+
+                    {
+                        std::lock_guard<std::mutex> lock(result_mutex);
+                        std::copy(plain_block.begin(), plain_block.end(), result.begin() + i);
+                    }
+
+                    local_prev_block = encrypted_block;
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();
@@ -353,6 +441,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> PCBCEncryption::encrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for PCBC mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
@@ -372,6 +462,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> PCBCEncryption::decrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for PCBC mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
@@ -391,6 +483,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> CFBEncryption::encrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for CFB mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
@@ -410,30 +504,63 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> CFBEncryption::decrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for CFB mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
         auto iv = init_vector.value();
         if (iv.size() < block_size) iv.resize(block_size);
 
+        const size_t num_blocks = data.size() / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
+
         std::vector<std::thread> threads;
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
+
         std::mutex result_mutex;
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-        for (size_t i = 0; i < result.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                size_t end_index = std::min(i + block_size, result.size());
-                std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+            threads.emplace_back([&, start_block, end_block, block_size, iv]() {
+                std::vector<std::byte> local_feedback;
 
-                std::vector<std::byte> feedback;
-                if (i == 0) feedback = iv;
-                else feedback = std::vector<std::byte>(result.begin() + (i - block_size), result.begin() + i);
+                if (start_block == 0) {
+                    local_feedback = iv;
+                } else {
+                    size_t prev_block_idx = start_block - 1;
+                    size_t prev_index = prev_block_idx * block_size;
+                    local_feedback = std::vector<std::byte>(
+                            data.begin() + prev_index,
+                            data.begin() + prev_index + block_size
+                    );
+                }
 
-                auto encrypted_feedback = algorithm->encrypt(feedback);
-                auto plain_block = bits_functions::xor_vectors(block, encrypted_feedback, block.size());
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = i + block_size;
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(plain_block.begin(), plain_block.end(), result.begin() + i);
+                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+                    auto encrypted_feedback = algorithm->encrypt(local_feedback);
+                    auto plain_block = bits_functions::xor_vectors(block, encrypted_feedback, block.size());
+
+                    {
+                        std::lock_guard<std::mutex> lock(result_mutex);
+                        std::copy(plain_block.begin(), plain_block.end(), result.begin() + i);
+                    }
+
+                    local_feedback = block;
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();
@@ -441,6 +568,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> OFBEncryption::encrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for OFB mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
@@ -460,6 +589,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> OFBEncryption::decrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for OFB mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
@@ -479,32 +610,54 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> CTREncryption::encrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for CTR mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
         auto iv = init_vector.value();
         if (iv.size() < block_size) iv.resize(block_size);
 
+        const size_t num_blocks = (data.size() + block_size - 1) / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
+
         std::vector<std::thread> threads;
-        std::mutex result_mutex;
         std::atomic<uint64_t> counter(0);
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
 
-        for (size_t i = 0; i < result.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                size_t end_index = std::min(i + block_size, result.size());
-                size_t current_block_size = end_index - i;
-                std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+        std::mutex result_mutex;
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-                uint64_t current_counter = counter.fetch_add(1, std::memory_order_relaxed);
-                auto counter_value = bits_functions::add_number_to_bytes(iv, current_counter);
-                auto encrypted_counter = algorithm->encrypt(counter_value);
+            threads.emplace_back([&, start_block, end_block, block_size]() {
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = std::min(i + block_size, result.size());
+                    size_t current_block_size = end_index - i;
 
-                std::vector<std::byte> keystream_block(encrypted_counter.begin(), encrypted_counter.begin() + current_block_size);
-                auto processed_block = bits_functions::xor_vectors(block, keystream_block, current_block_size);
+                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+                    uint64_t current_counter = counter.fetch_add(1, std::memory_order_relaxed);
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                    auto counter_value = bits_functions::add_number_to_bytes(iv, current_counter);
+                    auto encrypted_counter = algorithm->encrypt(counter_value);
+
+                    std::vector<std::byte> keystream_block(encrypted_counter.begin(),
+                                                           encrypted_counter.begin() + current_block_size);
+                    auto processed_block = bits_functions::xor_vectors(block, keystream_block, current_block_size);
+
+                    std::lock_guard<std::mutex> lock(result_mutex);
+                    std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();
@@ -512,32 +665,54 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> CTREncryption::decrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for CTR mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
         auto iv = init_vector.value();
         if (iv.size() < block_size) iv.resize(block_size);
 
+        const size_t num_blocks = (data.size() + block_size - 1) / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
+
         std::vector<std::thread> threads;
-        std::mutex result_mutex;
         std::atomic<uint64_t> counter(0);
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
 
-        for (size_t i = 0; i < result.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                size_t end_index = std::min(i + block_size, result.size());
-                size_t current_block_size = end_index - i;
-                std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+        std::mutex result_mutex;
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-                uint64_t current_counter = counter.fetch_add(1, std::memory_order_relaxed);
-                auto counter_value = bits_functions::add_number_to_bytes(iv, current_counter);
-                auto encrypted_counter = algorithm->encrypt(counter_value);
+            threads.emplace_back([&, start_block, end_block, block_size]() {
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = std::min(i + block_size, result.size());
+                    size_t current_block_size = end_index - i;
 
-                std::vector<std::byte> keystream_block(encrypted_counter.begin(), encrypted_counter.begin() + current_block_size);
-                auto processed_block = bits_functions::xor_vectors(block, keystream_block, current_block_size);
+                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+                    uint64_t current_counter = counter.fetch_add(1, std::memory_order_relaxed);
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                    auto counter_value = bits_functions::add_number_to_bytes(iv, current_counter);
+                    auto encrypted_counter = algorithm->encrypt(counter_value);
+
+                    std::vector<std::byte> keystream_block(encrypted_counter.begin(),
+                                                           encrypted_counter.begin() + current_block_size);
+                    auto processed_block = bits_functions::xor_vectors(block, keystream_block, current_block_size);
+
+                    std::lock_guard<std::mutex> lock(result_mutex);
+                    std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();
@@ -545,6 +720,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> RandomDeltaEncryption::encrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for RandomDelta mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
@@ -552,22 +729,50 @@ namespace symmetric_context {
         if (iv.size() < block_size) iv.resize(block_size);
 
         std::vector<std::byte> random_delta(iv.begin() + iv.size() / 2, iv.end());
-        std::vector<std::byte> current_iv = iv;
+
+        const size_t num_blocks = data.size() / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
 
         std::vector<std::thread> threads;
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
+
         std::mutex result_mutex;
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-        for (size_t i = 0; i < result.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
-                size_t end_index = std::min(i + block_size, result.size());
-                std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
-                std::vector<std::byte> xor_block = bits_functions::xor_vectors(current_iv, block, block.size());
-                std::vector<std::byte> processed_block = algorithm->encrypt(xor_block);
+            threads.emplace_back([&, start_block, end_block, block_size, iv, random_delta]() {
+                std::vector<std::byte> current_iv = iv;
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                // Пропускаем блоки до start_block
+                for (size_t i = 0; i < start_block; ++i) {
+                    current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
+                }
+
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = i + block_size;
+
+                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+                    std::vector<std::byte> xor_block = bits_functions::xor_vectors(current_iv, block, block.size());
+                    std::vector<std::byte> processed_block = algorithm->encrypt(xor_block);
+
+                    {
+                        std::lock_guard<std::mutex> lock(result_mutex);
+                        std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
+                    }
+
+                    current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();
@@ -575,6 +780,8 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> RandomDeltaEncryption::decrypt(const std::vector<std::byte>& data) {
+        if (data.empty()) return data;
+
         if (!init_vector) throw std::runtime_error("IV required for RandomDelta mode");
         auto block_size = algorithm->get_block_size();
         std::vector<std::byte> result = data;
@@ -582,22 +789,50 @@ namespace symmetric_context {
         if (iv.size() < block_size) iv.resize(block_size);
 
         std::vector<std::byte> random_delta(iv.begin() + iv.size() / 2, iv.end());
-        std::vector<std::byte> current_iv = iv;
+
+        const size_t num_blocks = data.size() / block_size;
+        if (num_blocks == 0) return data;
+
+        const size_t num_threads = std::min(
+                static_cast<size_t>(std::thread::hardware_concurrency()),
+                num_blocks
+        );
 
         std::vector<std::thread> threads;
+        const size_t blocks_per_thread = num_blocks / num_threads;
+        const size_t extra_blocks = num_blocks % num_threads;
+
         std::mutex result_mutex;
+        size_t start_block = 0;
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-        for (size_t i = 0; i < result.size(); i += block_size) {
-            threads.emplace_back([&, i, block_size]() {
-                current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
-                size_t end_index = std::min(i + block_size, result.size());
-                std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
-                std::vector<std::byte> processed_block = algorithm->decrypt(block);
-                std::vector<std::byte> xor_block = bits_functions::xor_vectors(current_iv, processed_block, block.size());
+            threads.emplace_back([&, start_block, end_block, block_size, iv, random_delta]() {
+                std::vector<std::byte> current_iv = iv;
 
-                std::lock_guard<std::mutex> lock(result_mutex);
-                std::copy(xor_block.begin(), xor_block.end(), result.begin() + i);
+                // Пропускаем блоки до start_block
+                for (size_t i = 0; i < start_block; ++i) {
+                    current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
+                }
+
+                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    size_t i = block_idx * block_size;
+                    size_t end_index = i + block_size;
+
+                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
+                    std::vector<std::byte> processed_block = algorithm->decrypt(block);
+                    std::vector<std::byte> xor_block = bits_functions::xor_vectors(current_iv, processed_block, block.size());
+
+                    {
+                        std::lock_guard<std::mutex> lock(result_mutex);
+                        std::copy(xor_block.begin(), xor_block.end(), result.begin() + i);
+                    }
+
+                    current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
+                }
             });
+
+            start_block = end_block;
         }
 
         for (auto& t : threads) t.join();

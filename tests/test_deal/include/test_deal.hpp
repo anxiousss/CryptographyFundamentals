@@ -46,23 +46,10 @@ public:
 
 bool compare_byte_vectors(const std::vector<std::byte>& v1, const std::vector<std::byte>& v2);
 
-std::unique_ptr<des::DES> create_des_algorithm(const std::vector<std::byte>& key);
 std::unique_ptr<deal::DEAL> create_deal_algorithm_128(const std::vector<std::byte>& key);
 std::unique_ptr<deal::DEAL> create_deal_algorithm_192(const std::vector<std::byte>& key);
 std::unique_ptr<deal::DEAL> create_deal_algorithm_256(const std::vector<std::byte>& key);
 
-void test_ecb_encryption_decryption_des(TestRunner& runner);
-void test_cbc_encryption_decryption_des(TestRunner& runner);
-void test_pcbc_encryption_decryption_des(TestRunner& runner);
-void test_cfb_encryption_decryption_des(TestRunner& runner);
-void test_ofb_encryption_decryption_des(TestRunner& runner);
-void test_ctr_encryption_decryption_des(TestRunner& runner);
-void test_random_delta_encryption_decryption_des(TestRunner& runner);
-void test_different_padding_modes_des(TestRunner& runner);
-void test_empty_data_des(TestRunner& runner);
-void test_large_data_des(TestRunner& runner);
-void test_thread_safety_des(TestRunner& runner);
-void test_image_and_text_files_des(TestRunner& runner);
 
 void test_ecb_encryption_decryption_deal(TestRunner& runner);
 void test_cbc_encryption_decryption_deal(TestRunner& runner);
@@ -103,6 +90,4 @@ void test_different_padding_modes_deal_256(TestRunner& runner);
 void test_file_operations_deal_192(TestRunner& runner);
 void test_file_operations_deal_256(TestRunner& runner);
 
-int run_all_des_tests();
 int run_all_deal_tests();
-int run_all_tests();

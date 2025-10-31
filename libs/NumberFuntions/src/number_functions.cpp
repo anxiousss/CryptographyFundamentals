@@ -52,7 +52,7 @@ namespace number_functions {
         return result;
     }
 
-    boost::multiprecision::cpp_int legendre_symbol(const boost::multiprecision::cpp_int &a,
+    boost::multiprecision::cpp_int NumberTheoryFunctions::legendre_symbol(const boost::multiprecision::cpp_int &a,
                                                    const boost::multiprecision::cpp_int &p) {
         if (p <= 0 || p % 2 == 0) {
             return -2;
@@ -63,7 +63,7 @@ namespace number_functions {
         return (value == 1) ? 1 : -1;
     }
 
-    boost::multiprecision::cpp_int jacobi_symbol(const boost::multiprecision::cpp_int &a,
+    boost::multiprecision::cpp_int NumberTheoryFunctions::jacobi_symbol(const boost::multiprecision::cpp_int &a,
                                                  const boost::multiprecision::cpp_int &n) {
         if (n <= 0 || n % 2 == 0) return -2;
 

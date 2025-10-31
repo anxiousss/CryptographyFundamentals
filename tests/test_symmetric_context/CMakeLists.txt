@@ -1,3 +1,0 @@
-add_library(test_symmetric_context src/test_symmetric_context.cpp)
-target_link_libraries(test_symmetric_context PRIVATE deal des feistel_network symmetric_context bits_functions)
-target_include_directories(test_symmetric_context PUBLIC include)

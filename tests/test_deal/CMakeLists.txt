@@ -1,0 +1,3 @@
+add_library(test_deal src/test_deal.cpp)
+target_link_libraries(test_deal PRIVATE deal des feistel_network symmetric_context bits_functions)
+target_include_directories(test_deal PUBLIC include)
