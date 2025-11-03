@@ -1,0 +1,3 @@
+add_library(primality_tests src/primality_tests.cpp)
+target_link_libraries(primality_tests PUBLIC number_functions)
+target_include_directories(primality_tests PUBLIC include)
