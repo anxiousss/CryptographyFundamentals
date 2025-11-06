@@ -750,7 +750,7 @@ namespace symmetric_context {
             threads.emplace_back([&, start_block, end_block, block_size, iv, random_delta]() {
                 std::vector<std::byte> current_iv = iv;
 
-                // Пропускаем блоки до start_block
+
                 for (size_t i = 0; i < start_block; ++i) {
                     current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
                 }
@@ -810,7 +810,6 @@ namespace symmetric_context {
             threads.emplace_back([&, start_block, end_block, block_size, iv, random_delta]() {
                 std::vector<std::byte> current_iv = iv;
 
-                // Пропускаем блоки до start_block
                 for (size_t i = 0; i < start_block; ++i) {
                     current_iv = bits_functions::add_byte_vectors(current_iv, random_delta);
                 }
