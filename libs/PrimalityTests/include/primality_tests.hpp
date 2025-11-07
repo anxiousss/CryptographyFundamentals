@@ -20,6 +20,7 @@ namespace primality_tests {
     public:
         double is_prime(const boost::multiprecision::cpp_int& p, double min_probability) final;
     protected:
+        std::unordered_set<boost::multiprecision::cpp_int> primality_witnesses;
         virtual NumberState iteration(const boost::multiprecision::cpp_int& p) = 0;
         virtual size_t n_iterations(double probability);
         virtual double prime_probability(size_t k);
@@ -27,7 +28,6 @@ namespace primality_tests {
 
     class FermatPrimalityTest: public PrimalityTest {
     private:
-        std::unordered_set<boost::multiprecision::cpp_int> primality_witnesses;
         boost::random::random_device gen;
 
     public:
@@ -36,7 +36,6 @@ namespace primality_tests {
 
     class SolovayStrassenPrimalityTest: public PrimalityTest {
     private:
-        std::unordered_set<boost::multiprecision::cpp_int> primality_witnesses;
         boost::random::random_device gen;
 
     public:
@@ -45,12 +44,9 @@ namespace primality_tests {
 
     class MillerRabinPrimalityTest: public PrimalityTest {
     private:
-        std::unordered_set<boost::multiprecision::cpp_int> primality_witnesses;
         boost::random::random_device gen;
-        boost::multiprecision::cpp_int t, s;
 
     public:
-        void decomposition_determination(const boost::multiprecision::cpp_int &p);
         NumberState iteration(const boost::multiprecision::cpp_int& p) override;
         double prime_probability(size_t k) override;
         size_t n_iterations(double probability) override;

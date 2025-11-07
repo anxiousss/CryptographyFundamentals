@@ -55,7 +55,8 @@ namespace number_functions {
     boost::multiprecision::cpp_int NumberTheoryFunctions::legendre_symbol(const boost::multiprecision::cpp_int &a,
                                                    const boost::multiprecision::cpp_int &p) {
         if (p <= 0 || p % 2 == 0) {
-            return -2;
+            throw std::invalid_argument("Legendre symbol is defined only for positive odd n");
+
         }
         if (a % p == 0) return 0;
         auto exponent = (p - 1) / 2;
@@ -64,8 +65,10 @@ namespace number_functions {
     }
 
     boost::multiprecision::cpp_int NumberTheoryFunctions::jacobi_symbol(const boost::multiprecision::cpp_int &a,
-                                                 const boost::multiprecision::cpp_int &n) {
-        if (n <= 0 || n % 2 == 0) return -2;
+                                                                        const boost::multiprecision::cpp_int &n) {
+        if (n <= 0 || n % 2 == 0) {
+            throw std::invalid_argument("Jacobi symbol is defined only for positive odd n");
+        }
 
         boost::multiprecision::cpp_int x = a % n;
         boost::multiprecision::cpp_int y = n;
@@ -75,12 +78,20 @@ namespace number_functions {
             while (x % 2 == 0) {
                 x /= 2;
                 boost::multiprecision::cpp_int r = y % 8;
-                if (r == 3 || r == 5) j = -j;
+                if (r == 3 || r == 5) {
+                    j = -j;
+                }
             }
+
             std::swap(x, y);
-            if (x % 4 == 3 && y % 4 == 3) j = -j;
+
+            if (x % 4 == 3 && y % 4 == 3) {
+                j = -j;
+            }
+
             x %= y;
         }
+
         return (y == 1) ? j : 0;
     }
 }
