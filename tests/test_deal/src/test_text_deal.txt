@@ -1,3 +1,0 @@
-This is a test text file for DEAL encryption.
-DEAL uses 128-bit blocks and supports 128, 192, 256-bit keys.
-Final line of text content for DEAL testing.

@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 
-find_package(Boost REQUIRED COMPONENTS filesystem random system)
+# find_package(Boost REQUIRED COMPONENTS filesystem random system)
 
 
 add_subdirectory(libs/bits_functions)
