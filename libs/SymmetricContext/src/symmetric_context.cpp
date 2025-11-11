@@ -65,9 +65,14 @@ namespace symmetric_context {
 
     void ISO10126Padding::padding(std::vector<std::byte>& data, size_t target_size) {
         if (data.size() >= target_size) return;
+
         size_t original_size = data.size();
         size_t padding_size = target_size - original_size;
+
+        std::vector<std::byte> original_data = data;
         data.resize(target_size);
+
+        std::copy(original_data.begin(), original_data.end(), data.begin());
 
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -81,12 +86,18 @@ namespace symmetric_context {
 
     void ISO10126Padding::remove_padding(std::vector<std::byte>& data) {
         if (data.empty()) return;
-        size_t padding_size = static_cast<size_t>(data.back());
-        if (padding_size > 0 && padding_size <= data.size()) {
-            data.resize(data.size() - padding_size);
+
+        size_t data_size = data.size();
+        uint8_t padding_size = static_cast<uint8_t>(data.back());
+
+        if (padding_size == 0 || padding_size > data_size) {
+            return;
+        }
+
+        if (padding_size <= data_size) {
+            data.resize(data_size - padding_size);
         }
     }
-
     SymmetricContext::SymmetricContext(std::vector<std::byte> key_,
                                        EncryptionModes encryption_mode_,
                                        PaddingModes padding_mode_,
@@ -143,12 +154,30 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> SymmetricContext::apply_padding(const std::vector<std::byte>& data) {
-        if (data.empty()) return data;
+        if (data.empty()) {
+            auto block_size = encryption_mode->get_block_size();
+            std::vector<std::byte> padded_data;
+            padded_data.reserve(block_size);
+            padding_mode->padding(padded_data, block_size);
+            return padded_data;
+        }
 
         auto block_size = encryption_mode->get_block_size();
         std::vector<std::byte> padded_data = data;
+
+
         size_t required_size = ((data.size() + block_size - 1) / block_size) * block_size;
+        if (required_size == data.size()) {
+            required_size += block_size;
+        }
+
         padding_mode->padding(padded_data, required_size);
+
+        if (padded_data.size() % block_size != 0) {
+            std::cout << "ERROR: Padding failed! Size " << padded_data.size()
+                      << " is not multiple of block size " << block_size << std::endl;
+        }
+
         return padded_data;
     }
 
@@ -627,7 +656,6 @@ namespace symmetric_context {
         );
 
         std::vector<std::thread> threads;
-        std::atomic<uint64_t> counter(0);
         const size_t blocks_per_thread = num_blocks / num_threads;
         const size_t extra_blocks = num_blocks % num_threads;
 
@@ -636,16 +664,16 @@ namespace symmetric_context {
         for (size_t t = 0; t < num_threads; ++t) {
             size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
-            threads.emplace_back([&, start_block, end_block, block_size]() {
+            threads.emplace_back([&, start_block, end_block, block_size, iv]() {
                 for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
                     size_t i = block_idx * block_size;
                     size_t end_index = std::min(i + block_size, result.size());
                     size_t current_block_size = end_index - i;
 
                     std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
-                    uint64_t current_counter = counter.fetch_add(1, std::memory_order_relaxed);
 
-                    auto counter_value = bits_functions::add_number_to_bytes(iv, current_counter);
+                    // Каждый блок получает уникальное значение счетчика на основе его индекса
+                    auto counter_value = bits_functions::add_number_to_bytes(iv, block_idx);
                     auto encrypted_counter = algorithm->encrypt(counter_value);
 
                     std::vector<std::byte> keystream_block(encrypted_counter.begin(),
@@ -665,58 +693,7 @@ namespace symmetric_context {
     }
 
     std::vector<std::byte> CTREncryption::decrypt(const std::vector<std::byte>& data) {
-        if (data.empty()) return data;
-
-        if (!init_vector) throw std::runtime_error("IV required for CTR mode");
-        auto block_size = algorithm->get_block_size();
-        std::vector<std::byte> result = data;
-        auto iv = init_vector.value();
-        if (iv.size() < block_size) iv.resize(block_size);
-
-        const size_t num_blocks = (data.size() + block_size - 1) / block_size;
-        if (num_blocks == 0) return data;
-
-        const size_t num_threads = std::min(
-                static_cast<size_t>(std::thread::hardware_concurrency()),
-                num_blocks
-        );
-
-        std::vector<std::thread> threads;
-        std::atomic<uint64_t> counter(0);
-        const size_t blocks_per_thread = num_blocks / num_threads;
-        const size_t extra_blocks = num_blocks % num_threads;
-
-        std::mutex result_mutex;
-        size_t start_block = 0;
-        for (size_t t = 0; t < num_threads; ++t) {
-            size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
-
-            threads.emplace_back([&, start_block, end_block, block_size]() {
-                for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
-                    size_t i = block_idx * block_size;
-                    size_t end_index = std::min(i + block_size, result.size());
-                    size_t current_block_size = end_index - i;
-
-                    std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
-                    uint64_t current_counter = counter.fetch_add(1, std::memory_order_relaxed);
-
-                    auto counter_value = bits_functions::add_number_to_bytes(iv, current_counter);
-                    auto encrypted_counter = algorithm->encrypt(counter_value);
-
-                    std::vector<std::byte> keystream_block(encrypted_counter.begin(),
-                                                           encrypted_counter.begin() + current_block_size);
-                    auto processed_block = bits_functions::xor_vectors(block, keystream_block, current_block_size);
-
-                    std::lock_guard<std::mutex> lock(result_mutex);
-                    std::copy(processed_block.begin(), processed_block.end(), result.begin() + i);
-                }
-            });
-
-            start_block = end_block;
-        }
-
-        for (auto& t : threads) t.join();
-        return result;
+        return encrypt(data);
     }
 
     std::vector<std::byte> RandomDeltaEncryption::encrypt(const std::vector<std::byte>& data) {

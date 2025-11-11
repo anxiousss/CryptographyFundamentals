@@ -2267,7 +2267,7 @@ void test_mp4_file_operations_deal(TestRunner& runner) {
         };
 
         auto algorithm = create_deal_algorithm_128(key);
-        SymmetricContext cipher(key, EncryptionModes::PCBC, PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::ISO_10126, iv, {}, std::move(algorithm));
 
         std::filesystem::path base_dir = "tests\\test_deal\\src";
         std::filesystem::create_directories(base_dir);
@@ -2352,7 +2352,7 @@ int run_all_deal_tests() {
     std::cout << "======================================" << std::endl;
 
     try {
-        /*test_ecb_encryption_decryption_deal(runner);
+        test_ecb_encryption_decryption_deal(runner);
         test_cbc_encryption_decryption_deal(runner);
         test_pcbc_encryption_decryption_deal(runner);
         test_cfb_encryption_decryption_deal(runner);
@@ -2392,7 +2392,7 @@ int run_all_deal_tests() {
         test_binary_file_operations_deal(runner);
         test_image_file_operations_deal(runner);
         test_pdf_file_operations_deal(runner);
-        test_zip_file_operations_deal(runner);*/
+        test_zip_file_operations_deal(runner);
         test_mp4_file_operations_deal(runner);
     } catch (const std::exception& e) {
         std::cout << "DEAL Test interrupted by exception: " << e.what() << std::endl;

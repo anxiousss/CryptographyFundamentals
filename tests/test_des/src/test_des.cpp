@@ -156,7 +156,7 @@ void test_ecb_encryption_decryption_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        SymmetricContext algo(key, EncryptionModes::ECB, PaddingModes::PKCS7,
+        SymmetricContext algo(key, EncryptionModes::ECB, PaddingModes::ISO_10126,
                               std::nullopt, {}, std::move(algorithm));
 
         auto encrypted = algo.encrypt(test_data).get();
@@ -192,7 +192,7 @@ void test_cbc_encryption_decryption_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        SymmetricContext algo(key, EncryptionModes::CBC, PaddingModes::PKCS7,
+        SymmetricContext algo(key, EncryptionModes::CBC, PaddingModes::ISO_10126,
                               iv, {}, std::move(algorithm));
 
         auto encrypted = algo.encrypt(test_data).get();
@@ -228,7 +228,7 @@ void test_pcbc_encryption_decryption_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        SymmetricContext algo(key, EncryptionModes::PCBC, PaddingModes::PKCS7,
+        SymmetricContext algo(key, EncryptionModes::PCBC, PaddingModes::ISO_10126,
                               iv, {}, std::move(algorithm));
 
         auto encrypted = algo.encrypt(test_data).get();
@@ -264,7 +264,7 @@ void test_cfb_encryption_decryption_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        SymmetricContext algo(key, EncryptionModes::CFB, PaddingModes::PKCS7,
+        SymmetricContext algo(key, EncryptionModes::CFB, PaddingModes::ISO_10126,
                               iv, {}, std::move(algorithm));
 
         auto encrypted = algo.encrypt(test_data).get();
@@ -300,7 +300,7 @@ void test_ofb_encryption_decryption_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        SymmetricContext algo(key, EncryptionModes::OFB, PaddingModes::PKCS7,
+        SymmetricContext algo(key, EncryptionModes::OFB, PaddingModes::ISO_10126,
                               iv, {}, std::move(algorithm));
 
         auto encrypted = algo.encrypt(test_data).get();
@@ -336,7 +336,7 @@ void test_ctr_encryption_decryption_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        SymmetricContext algo(key, EncryptionModes::CTR, PaddingModes::PKCS7,
+        SymmetricContext algo(key, EncryptionModes::CTR, PaddingModes::ISO_10126,
                               iv, {}, std::move(algorithm));
 
         auto encrypted = algo.encrypt(test_data).get();
@@ -372,7 +372,7 @@ void test_random_delta_encryption_decryption_des(TestRunner& runner) {
 
         auto algorithm = create_des_algorithm(key);
 
-        SymmetricContext algo(key, EncryptionModes::RandomDelta, PaddingModes::PKCS7,
+        SymmetricContext algo(key, EncryptionModes::RandomDelta, PaddingModes::ISO_10126,
                               iv, {}, std::move(algorithm));
 
         auto encrypted = algo.encrypt(test_data).get();
@@ -590,19 +590,18 @@ void test_text_file_operations_des(TestRunner& runner) {
         };
 
         auto algorithm = create_des_algorithm(key);
-        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::ISO_10126, iv, {}, std::move(algorithm));
 
         std::filesystem::path base_dir = "tests\\test_des\\src";
         std::filesystem::create_directories(base_dir);
 
-        // Используем пользовательский файл или создаем тестовый
         std::filesystem::path text_path;
         if (!test_config_des::text_file_path.empty()) {
             text_path = test_config_des::text_file_path;
             std::cout << "Using custom text file: " << text_path << std::endl;
 
             if (!std::filesystem::exists(text_path)) {
-                std::cout << "✗ Custom text file not found: " << text_path << std::endl;
+                std::cout << "Custom text file not found: " << text_path << std::endl;
                 runner.end_test(false);
                 return;
             }
@@ -621,35 +620,31 @@ void test_text_file_operations_des(TestRunner& runner) {
         std::filesystem::path encrypted_path = base_dir / "encrypted_text_des.bin";
         std::filesystem::path decrypted_path = base_dir / "decrypted_text_des.txt";
 
-        // Измерение времени шифрования
         auto encrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
         cipher.encrypt(text_path, opt_encrypted).get();
         auto encrypt_end = std::chrono::high_resolution_clock::now();
         auto encrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(encrypt_end - encrypt_start);
 
-        // Измерение времени дешифрования
         auto decrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
         cipher.decrypt(encrypted_path, opt_decrypted).get();
         auto decrypt_end = std::chrono::high_resolution_clock::now();
         auto decrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(decrypt_end - decrypt_start);
 
-        // Получение размеров файлов
         auto original_size = std::filesystem::file_size(text_path);
         auto encrypted_size = std::filesystem::file_size(encrypted_path);
         auto decrypted_size = std::filesystem::file_size(decrypted_path);
 
-        // Вывод метрик
         print_file_metrics("Text File", original_size, encrypted_size, decrypted_size,
                            encrypt_duration, decrypt_duration);
 
         bool success = compare_files(text_path, decrypted_path);
 
         if (success) {
-            std::cout << "✓ Text file encryption/decryption successful - files match perfectly" << std::endl;
+            std::cout << "Text file encryption/decryption successful - files match perfectly" << std::endl;
         } else {
-            std::cout << "✗ Text file encryption/decryption failed - file content mismatch" << std::endl;
+            std::cout << "Text file encryption/decryption failed - file content mismatch" << std::endl;
         }
 
         runner.assert_true(success, "Text file content should match after DES encryption/decryption");
@@ -676,19 +671,18 @@ void test_binary_file_operations_des(TestRunner& runner) {
         };
 
         auto algorithm = create_des_algorithm(key);
-        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::ISO_10126, iv, {}, std::move(algorithm));
 
         std::filesystem::path base_dir = "tests\\test_des\\src";
         std::filesystem::create_directories(base_dir);
 
-        // Используем пользовательский файл или создаем тестовый
         std::filesystem::path binary_path;
         if (!test_config_des::binary_file_path.empty()) {
             binary_path = test_config_des::binary_file_path;
             std::cout << "Using custom binary file: " << binary_path << std::endl;
 
             if (!std::filesystem::exists(binary_path)) {
-                std::cout << "✗ Custom binary file not found: " << binary_path << std::endl;
+                std::cout << "Custom binary file not found: " << binary_path << std::endl;
                 runner.end_test(false);
                 return;
             }
@@ -698,7 +692,6 @@ void test_binary_file_operations_des(TestRunner& runner) {
 
             std::ofstream binary_file(binary_path, std::ios::binary);
 
-            // Создание разнообразных бинарных данных (1MB)
             std::vector<unsigned char> test_binary_data;
             for (size_t i = 0; i < 1 * 1024 * 1024; ++i) {
                 test_binary_data.push_back(static_cast<unsigned char>((i * 7) % 256));
@@ -710,35 +703,31 @@ void test_binary_file_operations_des(TestRunner& runner) {
         std::filesystem::path encrypted_path = base_dir / "encrypted_binary_des.bin";
         std::filesystem::path decrypted_path = base_dir / "decrypted_binary_des.bin";
 
-        // Измерение времени шифрования
         auto encrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
         cipher.encrypt(binary_path, opt_encrypted).get();
         auto encrypt_end = std::chrono::high_resolution_clock::now();
         auto encrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(encrypt_end - encrypt_start);
 
-        // Измерение времени дешифрования
         auto decrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
         cipher.decrypt(encrypted_path, opt_decrypted).get();
         auto decrypt_end = std::chrono::high_resolution_clock::now();
         auto decrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(decrypt_end - decrypt_start);
 
-        // Получение размеров файлов
         auto original_size = std::filesystem::file_size(binary_path);
         auto encrypted_size = std::filesystem::file_size(encrypted_path);
         auto decrypted_size = std::filesystem::file_size(decrypted_path);
 
-        // Вывод метрик
         print_file_metrics("Binary File", original_size, encrypted_size, decrypted_size,
                            encrypt_duration, decrypt_duration);
 
         bool success = compare_files(binary_path, decrypted_path);
 
         if (success) {
-            std::cout << "✓ Binary file encryption/decryption successful - files match perfectly" << std::endl;
+            std::cout << "Binary file encryption/decryption successful - files match perfectly" << std::endl;
         } else {
-            std::cout << "✗ Binary file encryption/decryption failed - file content mismatch" << std::endl;
+            std::cout << "Binary file encryption/decryption failed - file content mismatch" << std::endl;
         }
 
         runner.assert_true(success, "Binary file content should match after DES encryption/decryption");
@@ -765,19 +754,18 @@ void test_image_file_operations_des(TestRunner& runner) {
         };
 
         auto algorithm = create_des_algorithm(key);
-        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+        SymmetricContext cipher(key, EncryptionModes::ECB, PaddingModes::ISO_10126, iv, {}, std::move(algorithm));
 
         std::filesystem::path base_dir = "tests\\test_des\\src";
         std::filesystem::create_directories(base_dir);
 
-        // Используем пользовательский файл или создаем тестовый
         std::filesystem::path image_path;
         if (!test_config_des::image_file_path.empty()) {
             image_path = test_config_des::image_file_path;
             std::cout << "Using custom image file: " << image_path << std::endl;
 
             if (!std::filesystem::exists(image_path)) {
-                std::cout << "✗ Custom image file not found: " << image_path << std::endl;
+                std::cout << "Custom image file not found: " << image_path << std::endl;
                 runner.end_test(false);
                 return;
             }
@@ -785,9 +773,7 @@ void test_image_file_operations_des(TestRunner& runner) {
             image_path = base_dir / "test_image.jpg";
             std::cout << "Creating test image file: " << image_path << std::endl;
 
-            // Создание простого JPEG файла
             std::ofstream image_file(image_path, std::ios::binary);
-            // Простой JPEG заголовок для маленького черного изображения
             const unsigned char jpeg_data[] = {
                     0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
                     0x00, 0x01, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -806,35 +792,31 @@ void test_image_file_operations_des(TestRunner& runner) {
         std::filesystem::path encrypted_path = base_dir / "encrypted_image_des.bin";
         std::filesystem::path decrypted_path = base_dir / "decrypted_image.jpg";
 
-        // Измерение времени шифрования
         auto encrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
         cipher.encrypt(image_path, opt_encrypted).get();
         auto encrypt_end = std::chrono::high_resolution_clock::now();
         auto encrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(encrypt_end - encrypt_start);
 
-        // Измерение времени дешифрования
         auto decrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
         cipher.decrypt(encrypted_path, opt_decrypted).get();
         auto decrypt_end = std::chrono::high_resolution_clock::now();
         auto decrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(decrypt_end - decrypt_start);
 
-        // Получение размеров файлов
         auto original_size = std::filesystem::file_size(image_path);
         auto encrypted_size = std::filesystem::file_size(encrypted_path);
         auto decrypted_size = std::filesystem::file_size(decrypted_path);
 
-        // Вывод метрик
         print_file_metrics("Image File", original_size, encrypted_size, decrypted_size,
                            encrypt_duration, decrypt_duration);
 
         bool success = compare_files(image_path, decrypted_path);
 
         if (success) {
-            std::cout << "✓ Image file encryption/decryption successful - files match perfectly" << std::endl;
+            std::cout << "Image file encryption/decryption successful - files match perfectly" << std::endl;
         } else {
-            std::cout << "✗ Image file encryption/decryption failed - file content mismatch" << std::endl;
+            std::cout << "Image file encryption/decryption failed - file content mismatch" << std::endl;
         }
 
         runner.assert_true(success, "Image file content should match after DES encryption/decryption");
@@ -861,19 +843,18 @@ void test_pdf_file_operations_des(TestRunner& runner) {
         };
 
         auto algorithm = create_des_algorithm(key);
-        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::ISO_10126, iv, {}, std::move(algorithm));
 
         std::filesystem::path base_dir = "tests\\test_des\\src";
         std::filesystem::create_directories(base_dir);
 
-        // Используем пользовательский файл или создаем тестовый
         std::filesystem::path pdf_path;
         if (!test_config_des::pdf_file_path.empty()) {
             pdf_path = test_config_des::pdf_file_path;
             std::cout << "Using custom PDF file: " << pdf_path << std::endl;
 
             if (!std::filesystem::exists(pdf_path)) {
-                std::cout << "✗ Custom PDF file not found: " << pdf_path << std::endl;
+                std::cout << "Custom PDF file not found: " << pdf_path << std::endl;
                 runner.end_test(false);
                 return;
             }
@@ -883,7 +864,6 @@ void test_pdf_file_operations_des(TestRunner& runner) {
 
             std::ofstream pdf_file(pdf_path);
 
-            // Простой PDF контент
             pdf_file << "%PDF-1.4\n";
             pdf_file << "1 0 obj\n";
             pdf_file << "<< /Type /Catalog /Pages 2 0 R >>\n";
@@ -919,35 +899,31 @@ void test_pdf_file_operations_des(TestRunner& runner) {
         std::filesystem::path encrypted_path = base_dir / "encrypted_pdf_des.bin";
         std::filesystem::path decrypted_path = base_dir / "decrypted_document.pdf";
 
-        // Измерение времени шифрования
         auto encrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
         cipher.encrypt(pdf_path, opt_encrypted).get();
         auto encrypt_end = std::chrono::high_resolution_clock::now();
         auto encrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(encrypt_end - encrypt_start);
 
-        // Измерение времени дешифрования
         auto decrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
         cipher.decrypt(encrypted_path, opt_decrypted).get();
         auto decrypt_end = std::chrono::high_resolution_clock::now();
         auto decrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(decrypt_end - decrypt_start);
 
-        // Получение размеров файлов
         auto original_size = std::filesystem::file_size(pdf_path);
         auto encrypted_size = std::filesystem::file_size(encrypted_path);
         auto decrypted_size = std::filesystem::file_size(decrypted_path);
 
-        // Вывод метрик
         print_file_metrics("PDF File", original_size, encrypted_size, decrypted_size,
                            encrypt_duration, decrypt_duration);
 
         bool success = compare_files(pdf_path, decrypted_path);
 
         if (success) {
-            std::cout << "✓ PDF file encryption/decryption successful - files match perfectly" << std::endl;
+            std::cout << "PDF file encryption/decryption successful - files match perfectly" << std::endl;
         } else {
-            std::cout << "✗ PDF file encryption/decryption failed - file content mismatch" << std::endl;
+            std::cout << "PDF file encryption/decryption failed - file content mismatch" << std::endl;
         }
 
         runner.assert_true(success, "PDF file content should match after DES encryption/decryption");
@@ -974,19 +950,18 @@ void test_zip_file_operations_des(TestRunner& runner) {
         };
 
         auto algorithm = create_des_algorithm(key);
-        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::ISO_10126, iv, {}, std::move(algorithm));
 
         std::filesystem::path base_dir = "tests\\test_des\\src";
         std::filesystem::create_directories(base_dir);
 
-        // Используем пользовательский файл или создаем тестовый
         std::filesystem::path zip_path;
         if (!test_config_des::zip_file_path.empty()) {
             zip_path = test_config_des::zip_file_path;
             std::cout << "Using custom ZIP file: " << zip_path << std::endl;
 
             if (!std::filesystem::exists(zip_path)) {
-                std::cout << "✗ Custom ZIP file not found: " << zip_path << std::endl;
+                std::cout << "Custom ZIP file not found: " << zip_path << std::endl;
                 runner.end_test(false);
                 return;
             }
@@ -994,10 +969,8 @@ void test_zip_file_operations_des(TestRunner& runner) {
             zip_path = base_dir / "test_archive.zip";
             std::cout << "Creating test ZIP file: " << zip_path << std::endl;
 
-            // Создание простого ZIP файла
             std::ofstream zip_file(zip_path, std::ios::binary);
 
-            // Простой ZIP заголовок
             const char* zip_content = "PK\x03\x04\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00";
             zip_file.write(zip_content, 12);
 
@@ -1014,35 +987,31 @@ void test_zip_file_operations_des(TestRunner& runner) {
         std::filesystem::path encrypted_path = base_dir / "encrypted_zip_des.bin";
         std::filesystem::path decrypted_path = base_dir / "decrypted_archive.zip";
 
-        // Измерение времени шифрования
         auto encrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
         cipher.encrypt(zip_path, opt_encrypted).get();
         auto encrypt_end = std::chrono::high_resolution_clock::now();
         auto encrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(encrypt_end - encrypt_start);
 
-        // Измерение времени дешифрования
         auto decrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
         cipher.decrypt(encrypted_path, opt_decrypted).get();
         auto decrypt_end = std::chrono::high_resolution_clock::now();
         auto decrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(decrypt_end - decrypt_start);
 
-        // Получение размеров файлов
         auto original_size = std::filesystem::file_size(zip_path);
         auto encrypted_size = std::filesystem::file_size(encrypted_path);
         auto decrypted_size = std::filesystem::file_size(decrypted_path);
 
-        // Вывод метрик
         print_file_metrics("ZIP File", original_size, encrypted_size, decrypted_size,
                            encrypt_duration, decrypt_duration);
 
         bool success = compare_files(zip_path, decrypted_path);
 
         if (success) {
-            std::cout << "✓ ZIP file encryption/decryption successful - files match perfectly" << std::endl;
+            std::cout << "ZIP file encryption/decryption successful - files match perfectly" << std::endl;
         } else {
-            std::cout << "✗ ZIP file encryption/decryption failed - file content mismatch" << std::endl;
+            std::cout << "ZIP file encryption/decryption failed - file content mismatch" << std::endl;
         }
 
         runner.assert_true(success, "ZIP file content should match after DES encryption/decryption");
@@ -1069,12 +1038,12 @@ void test_mp4_file_operations_des(TestRunner& runner) {
         };
 
         auto algorithm = create_des_algorithm(key);
-        SymmetricContext cipher(key, EncryptionModes::CBC, PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+        SymmetricContext cipher(key, EncryptionModes::CTR, PaddingModes::ISO_10126,
+                                iv, {}, std::move(algorithm));
 
         std::filesystem::path base_dir = "tests\\test_des\\src";
         std::filesystem::create_directories(base_dir);
 
-        // Используем пользовательский файл или создаем тестовый
         std::filesystem::path mp4_path;
         if (!test_config_des::mp4_file_path.empty()) {
             mp4_path = test_config_des::mp4_file_path;
@@ -1091,11 +1060,9 @@ void test_mp4_file_operations_des(TestRunner& runner) {
 
             std::ofstream mp4_file(mp4_path, std::ios::binary);
 
-            // Создание простого контейнера с MP4-подобными данными
             const char* fake_mp4_header = "ftypmp42";
             mp4_file.write(fake_mp4_header, 8);
 
-            // Добавление тестовых видео данных
             for (int frame = 0; frame < 100; ++frame) {
                 std::string frame_data = "FRAME" + std::to_string(frame) + ":";
                 // Имитация видеоданных
@@ -1114,35 +1081,31 @@ void test_mp4_file_operations_des(TestRunner& runner) {
         std::filesystem::path encrypted_path = base_dir / "encrypted_mp4_des.bin";
         std::filesystem::path decrypted_path = base_dir / "decrypted_video.mp4";
 
-        // Измерение времени шифрования
         auto encrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_encrypted = encrypted_path;
         cipher.encrypt(mp4_path, opt_encrypted).get();
         auto encrypt_end = std::chrono::high_resolution_clock::now();
         auto encrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(encrypt_end - encrypt_start);
 
-        // Измерение времени дешифрования
         auto decrypt_start = std::chrono::high_resolution_clock::now();
         std::optional<std::filesystem::path> opt_decrypted = decrypted_path;
         cipher.decrypt(encrypted_path, opt_decrypted).get();
         auto decrypt_end = std::chrono::high_resolution_clock::now();
         auto decrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(decrypt_end - decrypt_start);
 
-        // Получение размеров файлов
         auto original_size = std::filesystem::file_size(mp4_path);
         auto encrypted_size = std::filesystem::file_size(encrypted_path);
         auto decrypted_size = std::filesystem::file_size(decrypted_path);
 
-        // Вывод метрик
         print_file_metrics("MP4 File", original_size, encrypted_size, decrypted_size,
                            encrypt_duration, decrypt_duration);
 
         bool success = compare_files(mp4_path, decrypted_path);
 
         if (success) {
-            std::cout << "✓ MP4 file encryption/decryption successful - files match perfectly" << std::endl;
+            std::cout << "MP4 file encryption/decryption successful - files match perfectly" << std::endl;
         } else {
-            std::cout << "✗ MP4 file encryption/decryption failed - file content mismatch" << std::endl;
+            std::cout << "MP4 file encryption/decryption failed - file content mismatch" << std::endl;
         }
 
         runner.assert_true(success, "MP4 file content should match after DES encryption/decryption");
@@ -1154,7 +1117,6 @@ void test_mp4_file_operations_des(TestRunner& runner) {
     }
 }
 
-// ==================== ОСНОВНЫЕ ФУНКЦИИ ТЕСТИРОВАНИЯ ====================
 
 int run_all_des_tests() {
     TestRunner runner;
@@ -1163,7 +1125,6 @@ int run_all_des_tests() {
     std::cout << "=====================================" << std::endl;
 
     try {
-        // Базовые тесты DES
         test_ecb_encryption_decryption_des(runner);
         test_cbc_encryption_decryption_des(runner);
         test_pcbc_encryption_decryption_des(runner);
@@ -1175,8 +1136,6 @@ int run_all_des_tests() {
         test_empty_data_des(runner);
         test_large_data_des(runner);
         test_thread_safety_des(runner);
-
-        // Тесты файлов с детальными метриками
         test_text_file_operations_des(runner);
         test_binary_file_operations_des(runner);
         test_image_file_operations_des(runner);
@@ -1200,9 +1159,7 @@ void run_all_des_tests_with_custom_files(
         const std::filesystem::path& zip_file,
         const std::filesystem::path& mp4_file
 ) {
-    // Устанавливаем пользовательские файлы
     test_config_des::set_custom_files(text_file, binary_file, image_file, pdf_file, zip_file, mp4_file);
 
-    // Запускаем тесты
     run_all_des_tests();
 }

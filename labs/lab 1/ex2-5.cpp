@@ -7,7 +7,7 @@ int main() {
             "SMILEFACE.jpg",
             "test.pdf",
             "test.zip",
-            "test2.mp4"
+            "test.mp4"
     );
     return 0;
 }
