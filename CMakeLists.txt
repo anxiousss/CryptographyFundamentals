@@ -7,6 +7,7 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 # find_package(Boost REQUIRED COMPONENTS filesystem random system)
 
+add_compile_options(-O3)
 
 add_subdirectory(libs/bits_functions)
 add_subdirectory(libs/SymmetricContext)
