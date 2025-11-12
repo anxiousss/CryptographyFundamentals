@@ -1,3 +1,3 @@
 add_library(test_des src/test_des.cpp)
-target_link_libraries(test_des PRIVATE des feistel_network symmetric_context bits_functions)
+target_link_libraries(test_des PRIVATE test_utility des feistel_network symmetric_context bits_functions)
 target_include_directories(test_des PUBLIC include)

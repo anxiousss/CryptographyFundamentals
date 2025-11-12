@@ -1,4 +1,0 @@
-DEAL-256 Test File Content
-This file tests DEAL-256 algorithm with 256-bit key
-Multiple lines to ensure proper encryption/decryption
-Additional line for larger file size testing

@@ -2,12 +2,12 @@
 
 int main() {
     run_all_deal_tests_with_custom_files(
-            "test.txt",
-            "test.bin",
-            "SMILEFACE.jpg",
-            "test.pdf",
-            "test.zip",
-            "test.mp4"
-    );
+            "test_files/test.txt",
+            "test_files/test.bin",
+            "test_files/SMILEFACE.jpg",
+            "test_files/test.pdf",
+            "test_files/test.zip",
+            "test_files/test2.mp4");
+
     return 0;
 }

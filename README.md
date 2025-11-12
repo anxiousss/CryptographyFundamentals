@@ -1,2 +1,2 @@
 Look at my code with pleasure.
-![SMILEFACE](SMILEFACE.jpg)
+![SMILEFACE](test_files/SMILEFACE.jpg)
