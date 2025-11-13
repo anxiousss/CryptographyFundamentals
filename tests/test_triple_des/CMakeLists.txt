@@ -1,0 +1,3 @@
+add_library(test_triple_des src/test_triple_des.cpp)
+target_link_libraries(test_triple_des PRIVATE triple_des test_utility des feistel_network symmetric_context bits_functions)
+target_include_directories(test_triple_des PUBLIC include)

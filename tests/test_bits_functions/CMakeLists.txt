@@ -1,3 +1,0 @@
-add_library(test_bits_functions src/test_bits_functions.cpp)
-target_link_libraries(test_bits_functions PRIVATE bits_functions)
-target_include_directories(test_bits_functions PUBLIC include)

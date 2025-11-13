@@ -1,0 +1,3 @@
+add_library(triple_des src/triple_des.cpp)
+target_link_libraries(triple_des PUBLIC bits_functions symmetric_context feistel_network des)
+target_include_directories(triple_des PUBLIC include)
