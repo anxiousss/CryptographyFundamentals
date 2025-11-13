@@ -130,6 +130,11 @@ void TestFileConfig::print_available_files() const {
 
 namespace test_utils {
     std::filesystem::path setup_test_directory(const std::string& algorithm_name) {
+        if (algorithm_name.find("TripleDES") != std::string::npos) {
+            std::filesystem::path base_dir = "tests/test_triple_des/result";
+            std::filesystem::create_directories(base_dir);
+            return base_dir;
+        }
         std::filesystem::path base_dir = "tests/test_" + algorithm_name + "/results";
         std::filesystem::create_directories(base_dir);
         return base_dir;

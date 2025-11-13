@@ -184,7 +184,7 @@ void TripleDESTest::test_performance() {
             bool success_ede = compare_byte_vectors(test_data, decrypted_ede);
 
             std::cout << "    EDE - Encrypt: " << encrypt_duration_ede.count()
-                      << " μs, Decrypt: " << decrypt_duration_ede.count() << " μs, Success: "
+                      << " ms, Decrypt: " << decrypt_duration_ede.count() << " ms, Success: "
                       << (success_ede ? "Yes" : "No") << std::endl;
 
             if (!success_ede) {
