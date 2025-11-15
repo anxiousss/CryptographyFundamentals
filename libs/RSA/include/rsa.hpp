@@ -6,6 +6,10 @@
 #include "primality_tests.hpp"
 
 namespace rsa {
+
+    static boost::multiprecision::cpp_int e = 65537;
+
+
     enum class TestTypes {
         FermaTest,
         SolovayStrassenTest,
@@ -25,9 +29,11 @@ namespace rsa {
 
     class RSA {
     private:
+        mutable std::mutex mutex;
         std::shared_ptr<RsaKeysGeneration> rsa_key_generator;
         std::pair<boost::multiprecision::cpp_int, boost::multiprecision::cpp_int> public_key;
         std::pair<boost::multiprecision::cpp_int, boost::multiprecision::cpp_int> private_key;
+
     public:
         RSA(TestTypes type, double probability, size_t bit_length);
         std::future<std::vector<std::byte>> encrypt(const std::vector<std::byte>& data);
