@@ -7,10 +7,13 @@ namespace rsa {
         switch (type_) {
             case TestTypes::FermaTest:
                 this->primality_test = std::make_shared<primality_tests::FermatPrimalityTest>();
+                break;
             case TestTypes::SolovayStrassenTest:
                 this->primality_test = std::make_shared<primality_tests::SolovayStrassenPrimalityTest>();
+                break;
             case TestTypes::MilerRabinTest:
                 this->primality_test = std::make_shared<primality_tests::MillerRabinPrimalityTest>();
+                break;
         }
     }
 
@@ -26,6 +29,7 @@ namespace rsa {
         while (true) {
             while (true) {
                 p = dist(rd);
+                std::cout << p << std::endl;
                 if (this->primality_test->is_prime(p, min_probability) >= min_probability) {
                     while (true) {
                         q = dist(rd);
