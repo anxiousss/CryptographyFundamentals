@@ -23,5 +23,8 @@ namespace number_functions {
         static boost::multiprecision::cpp_int mod_exp(const boost::multiprecision::cpp_int &base,
                                                       const boost::multiprecision::cpp_int &exp,
                                                       const boost::multiprecision::cpp_int &mod);
+
+        static std::vector<boost::multiprecision::cpp_int>
+        make_continued_fraction(const boost::multiprecision::cpp_int &a, const boost::multiprecision::cpp_int& b);
     };
 }

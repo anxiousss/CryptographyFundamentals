@@ -94,5 +94,22 @@ namespace number_functions {
 
         return (y == 1) ? j : 0;
     }
+
+    std::vector<boost::multiprecision::cpp_int>
+    NumberTheoryFunctions::make_continued_fraction(const boost::multiprecision::cpp_int &x,
+                                                   const boost::multiprecision::cpp_int& y) {
+        boost::multiprecision::cpp_int a = x, b = y, numerator = x;
+        std::vector<boost::multiprecision::cpp_int> fraction_elements = {a / b};
+
+        boost::multiprecision::swap(a, b);
+        while (numerator != 0) {
+            auto whole_part = a / b;
+            numerator = a - b * whole_part;
+            fraction_elements.push_back(whole_part);
+            a = b;
+            b = numerator;
+        }
+        return fraction_elements;
+    }
 }
 

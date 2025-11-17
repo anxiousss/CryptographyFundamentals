@@ -106,7 +106,7 @@ void DesTest::test_performance() {
             bool success = compare_byte_vectors(test_data, decrypted);
 
             std::cout << "  Size " << size << " bytes - Encrypt: " << encrypt_duration.count()
-                      << " μs, Decrypt: " << decrypt_duration.count() << " μs, Success: "
+                      << " ms, Decrypt: " << decrypt_duration.count() << " ms, Success: "
                       << (success ? "Yes" : "No") << std::endl;
 
             if (!success) {

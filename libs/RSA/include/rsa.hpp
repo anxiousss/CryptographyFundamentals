@@ -7,9 +7,6 @@
 
 namespace rsa {
 
-    static boost::multiprecision::cpp_int e = 65537;
-
-
     enum class TestTypes {
         FermaTest,
         SolovayStrassenTest,
@@ -18,6 +15,7 @@ namespace rsa {
 
     class RsaKeysGeneration {
     private:
+        const boost::multiprecision::cpp_int e = 65537;
         size_t bit_length;
         double min_probability;
         std::shared_ptr<primality_tests::PrimalityTest> primality_test;
@@ -44,4 +42,6 @@ namespace rsa {
         std::future<void> decrypt(const std::filesystem::path& input_file,
                                   std::optional<std::filesystem::path>& output_file);
     };
+
+    boost::multiprecision::cpp_int  Wieners_attack(boost::multiprecision::cpp_int e, boost::multiprecision::cpp_int n);
 }

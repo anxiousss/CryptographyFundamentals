@@ -4,7 +4,6 @@ project(CryptographyFundamentals)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
-
 find_package(Boost REQUIRED COMPONENTS filesystem random system)
 
 add_compile_options(-O3)
