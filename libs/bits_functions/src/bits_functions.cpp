@@ -228,6 +228,53 @@ namespace bits_functions {
     }
 
 
+    std::vector<std::byte> random_bytes_vector(size_t size_vector) {
+        std::vector<std::byte> res;
+        std::random_device device;
+        std::mt19937 gen(device());
+        std::uniform_int_distribution<unsigned char> dist(0, 255);
+        for(size_t i = 0; i < size_vector; ++i) {
+            res.push_back(std::byte{dist(gen)});
+        }
+        return res;
+    }
+
+    template<typename T, typename... Vectors>
+    std::vector<T> concat_vectors(Vectors&&... vectors) {
+        std::vector<std::vector<std::remove_cv_t<std::remove_reference_t<T>>>> vecs = {
+                std::forward<Vectors>(vectors)...
+        };
+
+        std::vector<T> result;
+        return std::accumulate(
+                vecs.begin(),
+                vecs.end(),
+                result,
+                [](std::vector<T> acc, const std::vector<T>& vec) {
+                    acc.insert(acc.end(), vec.begin(), vec.end());
+                    return acc;
+                });
+    }
+
+    template<typename T>
+    std::vector<std::vector<T>> split_vector_accumulate(const std::vector<T>& source,
+                                                        const std::vector<size_t>& sizes) {
+        std::vector<std::vector<T>> result;
+
+        size_t total_size = std::accumulate(sizes.begin(), sizes.end(), 0ull);
+        if (total_size != source.size()) {
+            throw std::invalid_argument("Total sizes don't match source vector size");
+        }
+
+        auto it = source.begin();
+        for (size_t size : sizes) {
+            result.emplace_back(it, it + size);
+            it += size;
+        }
+
+        return result;
+    }
+
     std::ostream &operator<<(std::ostream &os, std::byte b) {
         return os << std::bitset<8>(std::to_integer<int>(b));
     }

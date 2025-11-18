@@ -2,6 +2,78 @@
 
 namespace rsa {
 
+    std::vector<std::byte> OAEP::hash(const std::vector<std::byte> &data) {
+        return data;
+    }
+
+    std::vector<std::byte> mgf1(const std::vector<std::byte>& seed, size_t length) {}
+
+    std::vector<std::byte>
+    OAEP::encode(const std::vector<std::byte> &msg, size_t k, const std::vector<std::byte> &label) {
+        if (msg.size() > k - 2 * hlen - 2) {
+            throw std::runtime_error("Message too long for OAEP padding.");
+        }
+
+        std::vector<std::byte> lhash = hash(label);
+        size_t ps_len = k - msg.size() - 2 * hlen - 2;
+        std::vector<std::byte> PS{ps_len, std::byte{0x00}};
+        PS.push_back(std::byte{0x01});
+
+        std::vector<std::byte> DB = bits_functions::concat_vectors<std::byte>(lhash, PS, msg);
+
+        std::vector<std::byte> seed = bits_functions::random_bytes_vector(hlen);
+        std::vector<std::byte> db_mask = mgf1(seed, k - hlen - 1);
+        std::vector<std::byte> masked_db = bits_functions::xor_vectors(DB, db_mask, k - hlen - 1);
+
+        std::vector<std::byte> seed_mask = mgf1(masked_db, hlen);
+        std::vector<std::byte> masked_seed = bits_functions::xor_vectors(seed, seed_mask, hlen);
+
+        masked_seed.insert(masked_seed.begin(), std::byte{0x00});
+
+        std::vector<std::byte> EM = bits_functions::concat_vectors<std::byte>(masked_seed, masked_db);
+        return EM;
+    }
+
+    std::vector<std::byte>
+    OAEP::decode(const std::vector<std::byte>& encoded_msg, size_t k,
+                                  const std::vector<std::byte>& label) {
+        if (encoded_msg[0] != std::byte{0x00} || encoded_msg.size() != k) {
+            throw std::runtime_error("Invalid msg for decoding.");
+        }
+
+
+        auto parts = bits_functions::split_vector_accumulate(encoded_msg,
+                                                                                   {1, hlen, k  - hlen - 1});
+
+        std::vector<std::byte>& masked_seed = parts[1];
+        std::vector<std::byte>& masked_db = parts[2];
+
+        std::vector<std::byte> seed_mask = mgf1(masked_db, hlen);
+        std::vector<std::byte> seed = bits_functions::xor_vectors(masked_seed, seed_mask, hlen);
+
+        std::vector<std::byte> db_mask = mgf1(seed, k - hlen - 1);
+        std::vector<std::byte> DB = bits_functions::xor_vectors(masked_db, db_mask, k - hlen - 1);
+
+        parts = bits_functions::split_vector_accumulate(DB, {label.size(),
+                                                             k - encoded_msg.size(), 1, encoded_msg.size()});
+
+        std::vector<std::byte>& lhash= parts[0];
+        std::vector<std::byte>& PS = parts[1];
+        std::byte& delimeter = parts[2][0];
+        std::vector<std::byte>& msg = parts[3];
+
+        if (lhash != hash(label))
+            throw std::runtime_error("Label hashes does not mathch.");
+
+        if (std::adjacent_find(PS.begin(), PS.end(), std::not_equal_to<std::byte>()) != PS.end())
+            throw std::runtime_error("PS elements have diffrent values.");
+
+        if (delimeter != std::byte{0x01})
+            throw std::runtime_error("Invalid delimeter value");
+
+        return msg;
+    }
+
     RsaKeysGeneration::RsaKeysGeneration(TestTypes type_, double probability_, size_t bit_length_):
             min_probability(probability_), bit_length(bit_length_) {
         switch (type_) {
@@ -197,4 +269,6 @@ namespace rsa {
             }
         }
     }
+
+
 }

@@ -2,10 +2,31 @@
 #include <future>
 #include <filesystem>
 #include <optional>
+#include <numeric>
+#include <iterator>
 
+#include "bits_functions.hpp"
 #include "primality_tests.hpp"
 
 namespace rsa {
+
+    class OAEP {
+    private:
+        size_t hlen;
+        std::vector<std::byte> mgf1(const std::vector<std::byte>& seed, size_t length);
+        std::vector<std::byte> hash(const std::vector<std::byte>& data);
+
+
+    public:
+        OAEP(size_t hlen = 32);
+
+        std::vector<std::byte> encode(const std::vector<std::byte>& msg, size_t k, const std::vector<std::byte>& label);
+        std::vector<std::byte> decode(const std::vector<std::byte>& encoded_msg, size_t k,
+                                      const std::vector<std::byte>& label);
+
+
+    };
+
 
     enum class TestTypes {
         FermaTest,

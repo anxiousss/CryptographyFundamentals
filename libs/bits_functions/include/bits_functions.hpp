@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <vector>
 #include <cstdint>
+#include <random>
 
 namespace bits_functions {
     enum class PermutationRule {
@@ -42,6 +43,15 @@ namespace bits_functions {
     std::vector<std::byte> expansion_e(const std::vector<std::byte>& input_32bit);
 
     std::vector<std::byte> convert_8blocks_to_6blocks(const std::vector<std::byte>& block);
+
+    std::vector<std::byte> random_bytes_vector(size_t size_vector);
+
+    template<typename T, typename... Vectors>
+    std::vector<T> concat_vectors(Vectors&&... vectors);
+
+    template<typename T>
+    std::vector<std::vector<T>> split_vector_accumulate(const std::vector<T>& source,
+                                                        const std::vector<size_t>& sizes);
 }
 
 std::ostream &operator<<(std::ostream &os, std::byte b);
