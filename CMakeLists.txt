@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 find_package(Boost REQUIRED COMPONENTS filesystem random system)
+find_package(OpenSSL REQUIRED)
+
 
 add_compile_options(-O3)
 
@@ -21,6 +23,7 @@ add_subdirectory(libs/RSA)
 add_subdirectory(tests/test_des)
 add_subdirectory(tests/test_deal)
 add_subdirectory(tests/test_triple_des)
+add_subdirectory(tests/test_rsa)
 
 add_executable(lab1t1 "labs/lab 1/ex1.1.cpp")
 add_executable(lab1t2 "labs/lab 1/ex1.2.cpp")
@@ -30,4 +33,4 @@ add_executable(lab2 "labs/lab 2/ex2.cpp")
 target_link_libraries(lab1t1 test_utility test_des symmetric_context feistel_network des)
 target_link_libraries(lab1t2 test_utility test_triple_des triple_des symmetric_context feistel_network des)
 target_link_libraries(lab1t3 test_utility test_deal symmetric_context feistel_network des deal)
-target_link_libraries(lab2 test_utility bits_functions number_functions number_functions rsa)
+target_link_libraries(lab2 test_rsa bits_functions number_functions number_functions rsa)

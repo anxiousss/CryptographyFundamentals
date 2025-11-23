@@ -1,27 +1,24 @@
-#include <random>
-#include "rsa.hpp"
-
-void print_byte_vector(const std::vector<std::byte>& data) {
-    std::cout << "Vector size: " << data.size() << " [";
-    for (size_t i = 0; i < std::min(data.size(), size_t(10)); ++i) {
-        std::cout << std::hex << static_cast<int>(data[i]) << " ";
-    }
-    if (data.size() > 10) std::cout << "...";
-    std::cout << "]" << std::dec << std::endl;
-}
-
-std::vector<std::byte> random_bytes_vector(size_t size_vector) {
-    std::vector<std::byte> res;
-    std::random_device device;
-    std::mt19937 gen(device());
-    std::uniform_int_distribution<unsigned char> dist(0, 255);
-    for(size_t i = 0; i < size_vector; ++i) {
-        res.push_back(std::byte{dist(gen)});
-    }
-    return res;
-}
-
+#include "test_rsa.hpp"
+#include <iostream>
 
 int main() {
-    std::cout << rsa::Wieners_attack(17993, 90581) << std::endl;
+    std::cout << "RSA File Encryption Test Suite" << std::endl;
+    std::cout << "==============================" << std::endl;
+
+    try {
+        SimpleRSATests tests;
+        bool success = tests.run_all_tests();
+
+        if (success) {
+            std::cout << "\n All tests completed successfully!" << std::endl;
+            return 0;
+        } else {
+            std::cout << "\n Some tests failed!" << std::endl;
+            return 1;
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << std::endl;
+        return 2;
+    }
 }

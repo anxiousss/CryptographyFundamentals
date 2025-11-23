@@ -239,42 +239,22 @@ namespace bits_functions {
         return res;
     }
 
-    template<typename T, typename... Vectors>
-    std::vector<T> concat_vectors(Vectors&&... vectors) {
-        std::vector<std::vector<std::remove_cv_t<std::remove_reference_t<T>>>> vecs = {
-                std::forward<Vectors>(vectors)...
-        };
 
-        std::vector<T> result;
-        return std::accumulate(
-                vecs.begin(),
-                vecs.end(),
-                result,
-                [](std::vector<T> acc, const std::vector<T>& vec) {
-                    acc.insert(acc.end(), vec.begin(), vec.end());
-                    return acc;
-                });
-    }
 
-    template<typename T>
-    std::vector<std::vector<T>> split_vector_accumulate(const std::vector<T>& source,
-                                                        const std::vector<size_t>& sizes) {
-        std::vector<std::vector<T>> result;
-
-        size_t total_size = std::accumulate(sizes.begin(), sizes.end(), 0ull);
-        if (total_size != source.size()) {
-            throw std::invalid_argument("Total sizes don't match source vector size");
+    std::vector<std::byte> I2OSP(uint64_t x, size_t output_len) {
+        if (x >= (1ULL << (8 * output_len))) {
+            throw std::invalid_argument("Integer too large for the specified output length");
         }
 
-        auto it = source.begin();
-        for (size_t size : sizes) {
-            result.emplace_back(it, it + size);
-            it += size;
+        std::vector<std::byte> result(output_len, std::byte{0});
+
+        for (size_t i = 0; i < output_len; i++) {
+            result[output_len - 1 - i] = static_cast<std::byte>(x & 0xFF);
+            x >>= 8;
         }
 
         return result;
     }
-
     std::ostream &operator<<(std::ostream &os, std::byte b) {
         return os << std::bitset<8>(std::to_integer<int>(b));
     }

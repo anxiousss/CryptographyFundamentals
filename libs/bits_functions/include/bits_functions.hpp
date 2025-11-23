@@ -46,12 +46,44 @@ namespace bits_functions {
 
     std::vector<std::byte> random_bytes_vector(size_t size_vector);
 
+
     template<typename T, typename... Vectors>
-    std::vector<T> concat_vectors(Vectors&&... vectors);
+    std::vector<T> concat_vectors(Vectors&&... vectors) {
+        std::vector<std::vector<std::remove_cv_t<std::remove_reference_t<T>>>> vecs = {
+                std::forward<Vectors>(vectors)...
+        };
+
+        std::vector<T> result;
+        return std::accumulate(
+                vecs.begin(),
+                vecs.end(),
+                result,
+                [](std::vector<T> acc, const std::vector<T>& vec) {
+                    acc.insert(acc.end(), vec.begin(), vec.end());
+                    return acc;
+                });
+    }
 
     template<typename T>
     std::vector<std::vector<T>> split_vector_accumulate(const std::vector<T>& source,
-                                                        const std::vector<size_t>& sizes);
+                                                        const std::vector<size_t>& sizes) {
+        std::vector<std::vector<T>> result;
+
+        size_t total_size = std::accumulate(sizes.begin(), sizes.end(), 0ull);
+        if (total_size != source.size()) {
+            throw std::invalid_argument("Total sizes don't match source vector size");
+        }
+
+        auto it = source.begin();
+        for (size_t size : sizes) {
+            result.emplace_back(it, it + size);
+            it += size;
+        }
+
+        return result;
+    }
+
+    std::vector<std::byte> I2OSP(uint64_t x, size_t output_len);
 }
 
 std::ostream &operator<<(std::ostream &os, std::byte b);
