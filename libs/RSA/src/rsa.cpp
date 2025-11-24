@@ -62,8 +62,14 @@ namespace rsa {
 
     std::vector<std::byte> OAEP::decode(const std::vector<std::byte>& encoded_msg, size_t k,
                                         const std::vector<std::byte>& label) {
-        if (encoded_msg.size() != k || encoded_msg[0] != std::byte{0x00}) {
-            throw std::runtime_error("Invalid message for decoding.");
+        if (encoded_msg.size() != k) {
+            throw std::runtime_error("Invalid message size for decoding. Expected: " +
+                                     std::to_string(k) + ", got: " +
+                                     std::to_string(encoded_msg.size()));
+        }
+
+        if (encoded_msg[0] != std::byte{0x00}) {
+            throw std::runtime_error("Invalid message for decoding - first byte is not zero");
         }
 
         auto parts = bits_functions::split_vector_accumulate(encoded_msg,
@@ -89,7 +95,8 @@ namespace rsa {
         std::vector<std::byte> PS(rest.begin(), separator_pos);
         std::vector<std::byte> message(separator_pos + 1, rest.end());
 
-        if (lhash_received != hash(label)) {
+        std::vector<std::byte> lhash_computed = hash(label);
+        if (lhash_received != lhash_computed) {
             throw std::runtime_error("Label hashes do not match.");
         }
 
@@ -262,6 +269,7 @@ namespace rsa {
         });
     }
 
+
     std::future<void>
     RSA::encrypt(const std::filesystem::path &input_file,
                  std::optional<std::filesystem::path> &output_file) {
@@ -293,14 +301,16 @@ namespace rsa {
             size_t modulus_bytes = (modulus_bits + 7) / 8;
 
             OAEP oaep;
-            size_t oaep_overhead = 2 * oaep.hlen + 2;
 
-            // Максимальный размер данных для одного блока RSA
-            size_t max_data_per_block = modulus_bytes - oaep_overhead;
-
-            if (max_data_per_block == 0) {
+            // Правильный расчет максимального размера данных для OAEP
+            size_t max_data_per_block = modulus_bytes - 2 * oaep.hlen - 2;
+            if (max_data_per_block <= 0) {
                 throw std::runtime_error("RSA key size too small for OAEP padding");
             }
+
+            // Записываем оригинальный размер файла
+            uint64_t original_file_size = std::filesystem::file_size(input_file);
+            out_file.write(reinterpret_cast<const char*>(&original_file_size), sizeof(original_file_size));
 
             std::vector<char> buffer(max_data_per_block);
             uint64_t total_bytes_processed = 0;
@@ -316,35 +326,40 @@ namespace rsa {
                 }
 
                 try {
-                    // OAEP кодирование увеличивает размер данных до modulus_bytes
+                    // OAEP кодирование
                     std::vector<std::byte> padded_data = oaep.encode(data_block, modulus_bytes, {});
 
-                    // Конвертируем в число
-                    boost::multiprecision::cpp_int msg_int;
-                    std::vector<unsigned char> temp_buffer;
-                    for (std::byte b : padded_data) {
-                        temp_buffer.push_back(static_cast<unsigned char>(b));
+                    // Конвертируем padded_data в число
+                    boost::multiprecision::cpp_int msg_int(0);
+                    for (size_t i = 0; i < padded_data.size(); ++i) {
+                        msg_int <<= 8;
+                        msg_int += static_cast<unsigned char>(padded_data[i]);
                     }
-                    boost::multiprecision::import_bits(msg_int, temp_buffer.begin(), temp_buffer.end(), 8, false);
+
+                    // Проверяем, что число меньше модуля
+                    if (msg_int >= public_key.second) {
+                        throw std::runtime_error("Padded message too large for modulus");
+                    }
 
                     // Шифруем
                     boost::multiprecision::cpp_int encrypted_int =
                             number_functions::NumberTheoryFunctions::mod_exp(msg_int, public_key.first, public_key.second);
 
-                    // Конвертируем обратно в байты
-                    std::vector<unsigned char> encrypted_bytes;
-                    boost::multiprecision::export_bits(encrypted_int,
-                                                       std::back_inserter(encrypted_bytes), 8, false);
+                    // Конвертируем обратно в байты с правильным выравниванием
+                    std::vector<std::byte> encrypted_bytes(modulus_bytes, std::byte{0});
 
-                    // Дополняем до размера модуля
-                    if (encrypted_bytes.size() < modulus_bytes) {
-                        encrypted_bytes.insert(encrypted_bytes.begin(),
-                                               modulus_bytes - encrypted_bytes.size(), 0);
+                    // Экспортируем биты в правильном порядке
+                    std::vector<unsigned char> temp_buffer;
+                    boost::multiprecision::export_bits(encrypted_int,
+                                                       std::back_inserter(temp_buffer), 8);
+
+                    // Копируем в результат с выравниванием по правому краю
+                    size_t start_pos = modulus_bytes - temp_buffer.size();
+                    for (size_t i = 0; i < temp_buffer.size(); ++i) {
+                        encrypted_bytes[start_pos + i] = static_cast<std::byte>(temp_buffer[i]);
                     }
 
-                    // Записываем размер блока перед данными (для дешифрования)
-                    uint32_t block_size = static_cast<uint32_t>(encrypted_bytes.size());
-                    out_file.write(reinterpret_cast<const char*>(&block_size), sizeof(block_size));
+                    // Записываем зашифрованные данные
                     out_file.write(reinterpret_cast<const char*>(encrypted_bytes.data()),
                                    encrypted_bytes.size());
 
@@ -397,76 +412,74 @@ namespace rsa {
                 throw std::runtime_error("Cannot create output file: " + actual_output_path.string());
             }
 
+            // Читаем оригинальный размер файла
+            uint64_t original_file_size;
+            in_file.read(reinterpret_cast<char*>(&original_file_size), sizeof(original_file_size));
+            if (in_file.gcount() != sizeof(original_file_size)) {
+                throw std::runtime_error("Cannot read original file size from encrypted file");
+            }
+
+            size_t modulus_bits = boost::multiprecision::msb(private_key.second) + 1;
+            size_t modulus_bytes = (modulus_bits + 7) / 8;
+
             OAEP oaep;
             uint64_t total_blocks = 0;
             uint64_t total_bytes_recovered = 0;
 
-            while (true) {
-                // Читаем размер блока
-                uint32_t block_size = 0;
-                in_file.read(reinterpret_cast<char*>(&block_size), sizeof(block_size));
+            // Читаем файл блоками по modulus_bytes
+            std::vector<char> buffer(modulus_bytes);
 
-                if (in_file.gcount() == 0) {
-                    break; // Конец файла
-                }
-
-                if (in_file.gcount() != sizeof(block_size)) {
-                    throw std::runtime_error("Invalid block size header");
-                }
-
-                // Читаем зашифрованные данные
-                std::vector<char> buffer(block_size);
-                in_file.read(buffer.data(), block_size);
-
-                if (in_file.gcount() != block_size) {
-                    throw std::runtime_error("Incomplete block data");
-                }
+            while (in_file.read(buffer.data(), modulus_bytes)) {
+                total_blocks++;
 
                 try {
-                    std::vector<std::byte> encrypted_block(block_size);
-                    for (size_t i = 0; i < block_size; ++i) {
+                    std::vector<std::byte> encrypted_block(modulus_bytes);
+                    for (size_t i = 0; i < modulus_bytes; ++i) {
                         encrypted_block[i] = static_cast<std::byte>(buffer[i]);
                     }
 
                     // Конвертируем в число
-                    boost::multiprecision::cpp_int encrypted_int;
-                    std::vector<unsigned char> temp_buffer;
-                    for (std::byte b : encrypted_block) {
-                        temp_buffer.push_back(static_cast<unsigned char>(b));
+                    boost::multiprecision::cpp_int encrypted_int(0);
+                    for (size_t i = 0; i < encrypted_block.size(); ++i) {
+                        encrypted_int <<= 8;
+                        encrypted_int += static_cast<unsigned char>(encrypted_block[i]);
                     }
-                    boost::multiprecision::import_bits(encrypted_int, temp_buffer.begin(), temp_buffer.end(), 8, false);
 
                     // Дешифруем
                     boost::multiprecision::cpp_int decrypted_int =
                             number_functions::NumberTheoryFunctions::mod_exp(encrypted_int, private_key.first, private_key.second);
 
                     // Конвертируем обратно в байты
-                    std::vector<unsigned char> decrypted_bytes;
+                    std::vector<std::byte> padded_data(modulus_bytes, std::byte{0});
+
+                    std::vector<unsigned char> temp_buffer;
                     boost::multiprecision::export_bits(decrypted_int,
-                                                       std::back_inserter(decrypted_bytes), 8, false);
+                                                       std::back_inserter(temp_buffer), 8);
 
-                    // Дополняем до размера модуля
-                    size_t modulus_bits = boost::multiprecision::msb(private_key.second) + 1;
-                    size_t modulus_bytes = (modulus_bits + 7) / 8;
-
-                    if (decrypted_bytes.size() < modulus_bytes) {
-                        decrypted_bytes.insert(decrypted_bytes.begin(),
-                                               modulus_bytes - decrypted_bytes.size(), 0);
+                    // Выравниваем по правому краю
+                    size_t start_pos = modulus_bytes - temp_buffer.size();
+                    for (size_t i = 0; i < temp_buffer.size(); ++i) {
+                        padded_data[start_pos + i] = static_cast<std::byte>(temp_buffer[i]);
                     }
 
                     // Применяем OAEP decoding
-                    std::vector<std::byte> padded_data(decrypted_bytes.size());
-                    for (size_t i = 0; i < decrypted_bytes.size(); ++i) {
-                        padded_data[i] = static_cast<std::byte>(decrypted_bytes[i]);
-                    }
-
                     std::vector<std::byte> original_data = oaep.decode(padded_data, modulus_bytes, {});
+
+                    // Определяем сколько байт нужно записать (для последнего блока)
+                    size_t bytes_to_write = original_data.size();
+                    if (total_bytes_recovered + bytes_to_write > original_file_size) {
+                        bytes_to_write = original_file_size - total_bytes_recovered;
+                    }
 
                     // Записываем восстановленные данные
                     out_file.write(reinterpret_cast<const char*>(original_data.data()),
-                                   original_data.size());
-                    total_bytes_recovered += original_data.size();
-                    total_blocks++;
+                                   bytes_to_write);
+                    total_bytes_recovered += bytes_to_write;
+
+                    // Если достигли конца файла, выходим
+                    if (total_bytes_recovered >= original_file_size) {
+                        break;
+                    }
 
                 } catch (const std::exception& e) {
                     throw std::runtime_error("Decryption error at block " +
@@ -476,6 +489,13 @@ namespace rsa {
 
             in_file.close();
             out_file.close();
+
+            // Проверяем, что восстановили правильное количество данных
+            if (total_bytes_recovered != original_file_size) {
+                throw std::runtime_error("File size mismatch after decryption. Expected: " +
+                                         std::to_string(original_file_size) + ", got: " +
+                                         std::to_string(total_bytes_recovered));
+            }
 
             std::cout << "File decrypted successfully: " << input_file
                       << " -> " << actual_output_path
