@@ -8,13 +8,46 @@ namespace rsa {
     OAEP::OAEP(size_t hlen_): hlen(hlen_) {}
 
     std::vector<std::byte> OAEP::hash(const std::vector<std::byte> &data) {
-        std::vector<std::byte> hash(hlen);
-        SHA256(reinterpret_cast<const unsigned char*>(data.data()),
-               data.size(),
-               reinterpret_cast<unsigned char*>(hash.data()));
-        return hash;
-    }
+        std::vector<std::byte> hash_result(hlen);
 
+        switch (hlen) {
+            case 20:
+                SHA1(reinterpret_cast<const unsigned char*>(data.data()),
+                     data.size(),
+                     reinterpret_cast<unsigned char*>(hash_result.data()));
+                break;
+
+            case 28:
+                SHA224(reinterpret_cast<const unsigned char*>(data.data()),
+                       data.size(),
+                       reinterpret_cast<unsigned char*>(hash_result.data()));
+                break;
+
+            case 32:
+                SHA256(reinterpret_cast<const unsigned char*>(data.data()),
+                       data.size(),
+                       reinterpret_cast<unsigned char*>(hash_result.data()));
+                break;
+
+            case 48:
+                SHA384(reinterpret_cast<const unsigned char*>(data.data()),
+                       data.size(),
+                       reinterpret_cast<unsigned char*>(hash_result.data()));
+                break;
+
+            case 64:
+                SHA512(reinterpret_cast<const unsigned char*>(data.data()),
+                       data.size(),
+                       reinterpret_cast<unsigned char*>(hash_result.data()));
+                break;
+
+            default:
+                throw std::invalid_argument("Unsupported hash length: " + std::to_string(hlen) +
+                                            ". Supported lengths: 20 (SHA1), 28 (SHA224), 32 (SHA256), 48 (SHA384), 64 (SHA512)");
+        }
+
+        return hash_result;
+    }
     std::vector<std::byte> OAEP::mgf1(const std::vector<std::byte>& seed, size_t length) {
         if (length > (1ULL << 32) * hlen) {
             throw std::invalid_argument("mask too long");
@@ -158,7 +191,7 @@ namespace rsa {
 
 
             bool passed_fermat = boost::multiprecision::abs(p - q) > (boost::multiprecision::cpp_int{1} << (bit_length / 2 - 1));
-            bool passed_wiener = boost::multiprecision::pow(d, 4) >= (n / 81);
+            bool passed_wiener = boost::multiprecision::pow(d, 4) > (n / 81);
 
 
             if (passed_fermat && passed_wiener) {
@@ -205,9 +238,16 @@ namespace rsa {
         }
     }
 
-    RSA::RSA(TestTypes type, double probability, size_t bit_length) {
+    RSA::RSA(TestTypes type, double probability, size_t bit_length, bool vulnerability) {
         rsa_key_generator = std::make_shared<RsaKeysGeneration>(type, probability, bit_length);
-        auto [pub, priv] = rsa_key_generator->generate_keys();
+        std::pair<std::pair<boost::multiprecision::cpp_int, boost::multiprecision::cpp_int>,
+                std::pair<boost::multiprecision::cpp_int, boost::multiprecision::cpp_int>> res;
+        if (vulnerability) {
+            res = rsa_key_generator->generate_bad_keys();
+        } else {
+            res = rsa_key_generator->generate_keys();
+        }
+        auto [pub, priv] = res;
         public_key = pub; private_key = priv;
     }
 
@@ -302,13 +342,11 @@ namespace rsa {
 
             OAEP oaep;
 
-            // Правильный расчет максимального размера данных для OAEP
             size_t max_data_per_block = modulus_bytes - 2 * oaep.hlen - 2;
             if (max_data_per_block <= 0) {
                 throw std::runtime_error("RSA key size too small for OAEP padding");
             }
 
-            // Записываем оригинальный размер файла
             uint64_t original_file_size = std::filesystem::file_size(input_file);
             out_file.write(reinterpret_cast<const char*>(&original_file_size), sizeof(original_file_size));
 
@@ -326,40 +364,32 @@ namespace rsa {
                 }
 
                 try {
-                    // OAEP кодирование
                     std::vector<std::byte> padded_data = oaep.encode(data_block, modulus_bytes, {});
 
-                    // Конвертируем padded_data в число
                     boost::multiprecision::cpp_int msg_int(0);
                     for (size_t i = 0; i < padded_data.size(); ++i) {
                         msg_int <<= 8;
                         msg_int += static_cast<unsigned char>(padded_data[i]);
                     }
 
-                    // Проверяем, что число меньше модуля
                     if (msg_int >= public_key.second) {
                         throw std::runtime_error("Padded message too large for modulus");
                     }
 
-                    // Шифруем
                     boost::multiprecision::cpp_int encrypted_int =
                             number_functions::NumberTheoryFunctions::mod_exp(msg_int, public_key.first, public_key.second);
 
-                    // Конвертируем обратно в байты с правильным выравниванием
                     std::vector<std::byte> encrypted_bytes(modulus_bytes, std::byte{0});
 
-                    // Экспортируем биты в правильном порядке
                     std::vector<unsigned char> temp_buffer;
                     boost::multiprecision::export_bits(encrypted_int,
                                                        std::back_inserter(temp_buffer), 8);
 
-                    // Копируем в результат с выравниванием по правому краю
                     size_t start_pos = modulus_bytes - temp_buffer.size();
                     for (size_t i = 0; i < temp_buffer.size(); ++i) {
                         encrypted_bytes[start_pos + i] = static_cast<std::byte>(temp_buffer[i]);
                     }
 
-                    // Записываем зашифрованные данные
                     out_file.write(reinterpret_cast<const char*>(encrypted_bytes.data()),
                                    encrypted_bytes.size());
 
@@ -412,7 +442,6 @@ namespace rsa {
                 throw std::runtime_error("Cannot create output file: " + actual_output_path.string());
             }
 
-            // Читаем оригинальный размер файла
             uint64_t original_file_size;
             in_file.read(reinterpret_cast<char*>(&original_file_size), sizeof(original_file_size));
             if (in_file.gcount() != sizeof(original_file_size)) {
@@ -426,7 +455,7 @@ namespace rsa {
             uint64_t total_blocks = 0;
             uint64_t total_bytes_recovered = 0;
 
-            // Читаем файл блоками по modulus_bytes
+
             std::vector<char> buffer(modulus_bytes);
 
             while (in_file.read(buffer.data(), modulus_bytes)) {
@@ -438,45 +467,37 @@ namespace rsa {
                         encrypted_block[i] = static_cast<std::byte>(buffer[i]);
                     }
 
-                    // Конвертируем в число
                     boost::multiprecision::cpp_int encrypted_int(0);
                     for (size_t i = 0; i < encrypted_block.size(); ++i) {
                         encrypted_int <<= 8;
                         encrypted_int += static_cast<unsigned char>(encrypted_block[i]);
                     }
 
-                    // Дешифруем
                     boost::multiprecision::cpp_int decrypted_int =
                             number_functions::NumberTheoryFunctions::mod_exp(encrypted_int, private_key.first, private_key.second);
 
-                    // Конвертируем обратно в байты
                     std::vector<std::byte> padded_data(modulus_bytes, std::byte{0});
 
                     std::vector<unsigned char> temp_buffer;
                     boost::multiprecision::export_bits(decrypted_int,
                                                        std::back_inserter(temp_buffer), 8);
 
-                    // Выравниваем по правому краю
                     size_t start_pos = modulus_bytes - temp_buffer.size();
                     for (size_t i = 0; i < temp_buffer.size(); ++i) {
                         padded_data[start_pos + i] = static_cast<std::byte>(temp_buffer[i]);
                     }
 
-                    // Применяем OAEP decoding
                     std::vector<std::byte> original_data = oaep.decode(padded_data, modulus_bytes, {});
 
-                    // Определяем сколько байт нужно записать (для последнего блока)
                     size_t bytes_to_write = original_data.size();
                     if (total_bytes_recovered + bytes_to_write > original_file_size) {
                         bytes_to_write = original_file_size - total_bytes_recovered;
                     }
 
-                    // Записываем восстановленные данные
                     out_file.write(reinterpret_cast<const char*>(original_data.data()),
                                    bytes_to_write);
                     total_bytes_recovered += bytes_to_write;
 
-                    // Если достигли конца файла, выходим
                     if (total_bytes_recovered >= original_file_size) {
                         break;
                     }
@@ -490,7 +511,6 @@ namespace rsa {
             in_file.close();
             out_file.close();
 
-            // Проверяем, что восстановили правильное количество данных
             if (total_bytes_recovered != original_file_size) {
                 throw std::runtime_error("File size mismatch after decryption. Expected: " +
                                          std::to_string(original_file_size) + ", got: " +
@@ -503,35 +523,57 @@ namespace rsa {
         });
     }
 
-    boost::multiprecision::cpp_int  Wieners_attack(boost::multiprecision::cpp_int e, boost::multiprecision::cpp_int n) {
-        auto fraction = number_functions::NumberTheoryFunctions::make_continued_fraction(e, n);
+    boost::multiprecision::cpp_int Wieners_attack(
+            boost::multiprecision::cpp_int e,
+            boost::multiprecision::cpp_int n) {
+
+        std::vector<boost::multiprecision::cpp_int> fraction =
+                number_functions::NumberTheoryFunctions::make_continued_fraction(e, n);
+
         size_t fraction_size = fraction.size();
-        std::vector<boost::multiprecision::cpp_int> numerators = {0, 1};
-        std::vector<boost::multiprecision::cpp_int> denominators {1, 0};
 
-        size_t index = 2;
-        while (numerators.back() != e && denominators.back() != n) {
-            boost::multiprecision::cpp_int num = fraction[index - 2] * numerators[index - 1] + numerators[index - 2],
-                                            denum = fraction[index - 2] * denominators[index - 1] + denominators[index - 2];
-            numerators.push_back(num);
-            denominators.push_back(denum);
-            ++index;
-        }
+        std::vector<boost::multiprecision::cpp_int> numerators;
+        std::vector<boost::multiprecision::cpp_int> denominators;
 
-        numerators.erase(numerators.begin());numerators.erase(numerators.begin() + 1);
-        denominators.erase(denominators.begin());denominators.erase(denominators.begin() + 1);
+        numerators.push_back(0);
+        numerators.push_back(1);
+        denominators.push_back(1);
+        denominators.push_back(0);
 
         for (size_t i = 0; i < fraction_size; ++i) {
-            auto phi_n = (e * denominators[i] - 1) / numerators[i];
-            boost::multiprecision::cpp_int b = n - phi_n + 1, c = n;
-            auto D = boost::multiprecision::pow(b, 2) - 4 * c;
-            boost::multiprecision::cpp_int p = (-b + boost::multiprecision::sqrt(D)) / 2,
-                                            q = (-b - boost::multiprecision::sqrt(D)) / 2;
+            boost::multiprecision::cpp_int num =
+                    fraction[i] * numerators[i + 1] + numerators[i];
+            boost::multiprecision::cpp_int den =
+                    fraction[i] * denominators[i + 1] + denominators[i];
+
+            numerators.push_back(num);
+            denominators.push_back(den);
+
+            boost::multiprecision::cpp_int d = denominators.back();
+            boost::multiprecision::cpp_int k = numerators.back();
+
+            if (k == 0) continue;
+
+            if ((e * d - 1) % k != 0) continue;
+
+            boost::multiprecision::cpp_int phi_n = (e * d - 1) / k;
+
+            boost::multiprecision::cpp_int b = n - phi_n + 1;
+            boost::multiprecision::cpp_int discriminant = b * b - 4 * n;
+
+            if (discriminant < 0) continue;
+
+            boost::multiprecision::cpp_int root = boost::multiprecision::sqrt(discriminant);
+            if (root * root != discriminant) continue;
+
+            boost::multiprecision::cpp_int p = (b + root) / 2;
+            boost::multiprecision::cpp_int q = (b - root) / 2;
 
             if (p * q == n) {
-                return denominators[i];
+                return d;
             }
         }
+
         throw std::runtime_error("Wiener's attack failed: private key not found");
     }
 }

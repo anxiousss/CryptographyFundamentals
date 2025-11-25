@@ -21,4 +21,12 @@ int main() {
         std::cerr << "Fatal error: " << e.what() << std::endl;
         return 2;
     }
+
+    /*std::cout << rsa::Wieners_attack(1073780833, 1220275921) << std::endl;
+    std::cout << rsa::Wieners_attack(1779399043, 2796304957) << std::endl;
+
+    auto pub = rsa::RsaKeysGeneration(rsa::TestTypes::MilerRabinTest, 0.9, 512).generate_bad_keys().first;
+    std::cout << pub.first << ' ' << pub.second << std::endl;
+    std::cout << rsa::Wieners_attack(pub.first, pub.second);*/
+    return 0;
 }

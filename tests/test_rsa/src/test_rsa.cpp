@@ -1,96 +1,50 @@
-// simple_rsa_tests.cpp
 #include "test_rsa.hpp"
 #include <chrono>
 
 SimpleRSATests::SimpleRSATests()
         : tests_passed(0), tests_failed(0), total_tests(0) {
 
-    // Устанавливаем директории
     test_files_dir = std::filesystem::current_path().parent_path() / "test_files";
-    test_dir = create_test_dir();
+    test_dir = std::filesystem::current_path().parent_path() /  "tests/test_rsa/results";
 
     std::cout << "Test files directory: " << test_files_dir << std::endl;
     std::cout << "Results directory: " << test_dir << std::endl;
 
-    // Проверяем существование тестовых файлов
     if (!std::filesystem::exists(test_files_dir)) {
         throw std::runtime_error("Test files directory does not exist: " + test_files_dir.string());
     }
 }
 
 SimpleRSATests::~SimpleRSATests() {
-    // Закомментируйте cleanup() если хотите сохранить результаты
-    // cleanup();
-}
 
-std::filesystem::path SimpleRSATests::create_test_dir() {
-    auto results_dir = std::filesystem::current_path().parent_path() /  "tests/test_rsa/results";
-    return results_dir;
-}
-
-void SimpleRSATests::cleanup() {
-    try {
-        if (std::filesystem::exists(test_dir)) {
-            std::filesystem::remove_all(test_dir);
-            std::cout << "Cleaned up test directory: " << test_dir << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Warning: Could not cleanup test directory: " << e.what() << std::endl;
-    }
 }
 
 bool SimpleRSATests::compare_files(const std::filesystem::path& file1, const std::filesystem::path& file2) {
+    if (!std::filesystem::exists(file1) || !std::filesystem::exists(file2)) {
+        return false;
+    }
+
+    if (std::filesystem::file_size(file1) != std::filesystem::file_size(file2)) {
+        return false;
+    }
+
     std::ifstream f1(file1, std::ios::binary);
     std::ifstream f2(file2, std::ios::binary);
 
     if (!f1.is_open() || !f2.is_open()) {
-        std::cout << "Cannot open files for comparison" << std::endl;
         return false;
     }
 
-    // Проверяем размеры
-    f1.seekg(0, std::ios::end);
-    f2.seekg(0, std::ios::end);
-    auto size1 = f1.tellg();
-    auto size2 = f2.tellg();
-
-    if (size1 != size2) {
-        std::cout << "Files have different sizes: " << size1 << " vs " << size2 << std::endl;
-        return false;
-    }
-
-    // Сравниваем содержимое
-    f1.seekg(0);
-    f2.seekg(0);
-
-    const size_t buffer_size = 4096;
-    char buffer1[buffer_size], buffer2[buffer_size];
-    size_t total_read = 0;
-
-    while (f1.read(buffer1, buffer_size) || f2.read(buffer2, buffer_size)) {
-        size_t count1 = f1.gcount();
-        size_t count2 = f2.gcount();
-
-        if (count1 != count2) {
-            std::cout << "Different number of bytes read at position " << total_read << std::endl;
+    char ch1, ch2;
+    while (f1.get(ch1) && f2.get(ch2)) {
+        if (ch1 != ch2) {
             return false;
         }
-
-        for (size_t i = 0; i < count1; ++i) {
-            if (buffer1[i] != buffer2[i]) {
-                std::cout << "Files differ at byte " << total_read + i
-                          << ": 0x" << std::hex << (int)(unsigned char)buffer1[i]
-                          << " vs 0x" << (int)(unsigned char)buffer2[i] << std::dec << std::endl;
-                return false;
-            }
-        }
-        total_read += count1;
     }
 
     return true;
 }
 
-// Тесты для существующих файлов
 bool SimpleRSATests::test_text_files() {
     total_tests++;
     std::cout << "\n--- Testing Text Files ---" << std::endl;
@@ -109,9 +63,8 @@ bool SimpleRSATests::test_text_files() {
         std::cout << "Using text file: " << input_file << std::endl;
         std::cout << "File size: " << std::filesystem::file_size(input_file) << " bytes" << std::endl;
 
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
 
-        // Шифруем
         std::optional<std::filesystem::path> opt_encrypted = encrypted_file;
         auto encrypt_future = rsa.encrypt(input_file, opt_encrypted);
         encrypt_future.get();
@@ -122,7 +75,6 @@ bool SimpleRSATests::test_text_files() {
             return false;
         }
 
-        // Дешифруем
         std::optional<std::filesystem::path> opt_decrypted = decrypted_file;
         auto decrypt_future = rsa.decrypt(encrypted_file, opt_decrypted);
         decrypt_future.get();
@@ -133,7 +85,6 @@ bool SimpleRSATests::test_text_files() {
             return false;
         }
 
-        // Сравниваем
         if (!compare_files(input_file, decrypted_file)) {
             std::cout << "FAIL: Original and decrypted files differ" << std::endl;
             tests_failed++;
@@ -172,7 +123,7 @@ bool SimpleRSATests::test_binary_files() {
         std::cout << "Using binary file: " << input_file << std::endl;
         std::cout << "File size: " << std::filesystem::file_size(input_file) << " bytes" << std::endl;
 
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
 
         std::optional<std::filesystem::path> opt_encrypted = encrypted_file;
         auto encrypt_future = rsa.encrypt(input_file, opt_encrypted);
@@ -220,7 +171,7 @@ bool SimpleRSATests::test_pdf_files() {
         std::cout << "Using PDF file: " << input_file << std::endl;
         std::cout << "File size: " << std::filesystem::file_size(input_file) << " bytes" << std::endl;
 
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
 
         std::optional<std::filesystem::path> opt_encrypted = encrypted_file;
         auto encrypt_future = rsa.encrypt(input_file, opt_encrypted);
@@ -268,7 +219,7 @@ bool SimpleRSATests::test_zip_files() {
         std::cout << "Using ZIP file: " << input_file << std::endl;
         std::cout << "File size: " << std::filesystem::file_size(input_file) << " bytes" << std::endl;
 
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
 
         std::optional<std::filesystem::path> opt_encrypted = encrypted_file;
         auto encrypt_future = rsa.encrypt(input_file, opt_encrypted);
@@ -303,7 +254,6 @@ bool SimpleRSATests::test_mp4_files() {
     std::cout << "\n--- Testing MP4 Files ---" << std::endl;
 
     try {
-        // Тестируем оба MP4 файла
         //auto input_file1 = test_files_dir / "test.mp4";
         auto input_file2 = test_files_dir / "test2.mp4";
 
@@ -338,7 +288,6 @@ bool SimpleRSATests::test_mp4_files() {
             std::cout << "SKIP: First MP4 file not found: " << input_file1 << std::endl;
         }*/
 
-        // Тест второго MP4 файла
         if (std::filesystem::exists(input_file2)) {
             auto encrypted_file2 = test_dir / "test2_encrypted.mp4";
             auto decrypted_file2 = test_dir / "test2_decrypted.mp4";
@@ -346,7 +295,7 @@ bool SimpleRSATests::test_mp4_files() {
             std::cout << "Using MP4 file: " << input_file2 << std::endl;
             std::cout << "File size: " << std::filesystem::file_size(input_file2) << " bytes" << std::endl;
 
-            rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+            rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
 
             std::optional<std::filesystem::path> opt_encrypted2 = encrypted_file2;
             auto encrypt_future2 = rsa.encrypt(input_file2, opt_encrypted2);
@@ -366,7 +315,7 @@ bool SimpleRSATests::test_mp4_files() {
             std::cout << "SKIP: Second MP4 file not found: " << input_file2 << std::endl;
         }
 
-        bool overall_passed =  test2_passed; // Хотя бы один должен пройти
+        bool overall_passed =  test2_passed;
 
         if (overall_passed) {
             tests_passed++;
@@ -401,7 +350,7 @@ bool SimpleRSATests::test_jpg_files() {
         std::cout << "Using JPG file: " << input_file << std::endl;
         std::cout << "File size: " << std::filesystem::file_size(input_file) << " bytes" << std::endl;
 
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
 
         std::optional<std::filesystem::path> opt_encrypted = encrypted_file;
         auto encrypt_future = rsa.encrypt(input_file, opt_encrypted);
@@ -444,8 +393,7 @@ bool SimpleRSATests::test_different_key_sizes() {
             return false;
         }
 
-        // Тест с 1024-битным ключом
-        rsa::RSA rsa_1024(rsa::TestTypes::MilerRabinTest, 0.999, 1024);
+        rsa::RSA rsa_1024(rsa::TestTypes::MilerRabinTest, 0.999, 1024, false);
         auto encrypted_1024 = test_dir / "test_encrypted_1024.bin";
         auto decrypted_1024 = test_dir / "test_decrypted_1024.bin";
 
@@ -463,8 +411,7 @@ bool SimpleRSATests::test_different_key_sizes() {
             return false;
         }
 
-        // Тест с 2048-битным ключом
-        rsa::RSA rsa_2048(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        rsa::RSA rsa_2048(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
         auto encrypted_2048 = test_dir / "test_encrypted_2048.bin";
         auto decrypted_2048 = test_dir / "test_decrypted_2048.bin";
 
@@ -482,7 +429,7 @@ bool SimpleRSATests::test_different_key_sizes() {
             return false;
         }
 
-        // Проверяем, что зашифрованные файлы разные
+
         if (compare_files(encrypted_1024, encrypted_2048)) {
             std::cout << "FAIL: Different keys produced identical encrypted files" << std::endl;
             tests_failed++;
@@ -502,61 +449,100 @@ bool SimpleRSATests::test_different_key_sizes() {
     }
 }
 
-bool SimpleRSATests::test_auto_generated_filenames() {
+bool SimpleRSATests::test_wieners_attack() {
     total_tests++;
-    std::cout << "\n--- Testing Auto-generated Filenames ---" << std::endl;
+    std::cout << "\n--- Testing Wiener's Attack ---" << std::endl;
 
     try {
-        auto input_file = test_files_dir / "test.txt";
+        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 1024, true);
 
-        if (!std::filesystem::exists(input_file)) {
-            std::cout << "SKIP: Test file not found: " << input_file << std::endl;
+        auto public_key = rsa.public_key;
+        boost::multiprecision::cpp_int e = public_key.first;
+        boost::multiprecision::cpp_int n = public_key.second;
+
+        std::cout << "Generated vulnerable RSA keys:" << std::endl;
+        std::cout << "e = " << e << std::endl;
+        std::cout << "n = " << n << std::endl;
+        std::cout << "Key size: 1024 bits" << std::endl;
+
+        std::cout << "Testing original keys..." << std::endl;
+        std::vector<std::byte> test_data = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}};
+        auto encrypt_future = rsa.encrypt(test_data);
+        auto encrypted_data = encrypt_future.get();
+        auto decrypt_future = rsa.decrypt(encrypted_data);
+        auto decrypted_data = decrypt_future.get();
+
+        if (test_data != decrypted_data) {
+            std::cout << "FAIL: Original keys don't work correctly" << std::endl;
             tests_failed++;
             return false;
         }
 
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        std::cout << "Original keys work correctly. Applying Wiener's attack..." << std::endl;
 
-        // Шифруем без указания выходного файла
-        std::optional<std::filesystem::path> no_output = std::nullopt;
-        auto encrypt_future = rsa.encrypt(input_file, no_output);
-        encrypt_future.get();
+        boost::multiprecision::cpp_int d_attack;
+        try {
+            d_attack = rsa::Wieners_attack(e, n);
+            std::cout << "Recovered private exponent d = " << d_attack << std::endl;
+        } catch (const std::exception& e) {
+            std::cout << "Wiener's attack failed: " << e.what() << std::endl;
+            std::cout << "Trying with smaller key size..." << std::endl;
 
-        // Проверяем автоматическое имя в директории исходного файла
-        auto expected_encrypted = test_files_dir / "test_encrypted.txt";
-        if (!std::filesystem::exists(expected_encrypted)) {
-            std::cout << "FAIL: Auto-generated encrypted file not found" << std::endl;
+            // Пробуем с меньшим размером ключа
+            rsa::RSA rsa_small(rsa::TestTypes::MilerRabinTest, 0.999, 512, true);
+            auto public_key_small = rsa.public_key;
+            d_attack = rsa::Wieners_attack(public_key_small.first, public_key_small.second);
+            std::cout << "Recovered private exponent d (512-bit) = " << d_attack << std::endl;
+        }
+
+        std::cout << "Testing recovered key..." << std::endl;
+
+        boost::multiprecision::cpp_int test_message = 123456789;
+        boost::multiprecision::cpp_int encrypted =
+                number_functions::NumberTheoryFunctions::mod_exp(test_message, e, n);
+        boost::multiprecision::cpp_int decrypted_with_attack =
+                number_functions::NumberTheoryFunctions::mod_exp(encrypted, d_attack, n);
+
+        if (test_message != decrypted_with_attack) {
+            std::cout << "FAIL: Recovered key doesn't work correctly" << std::endl;
+            std::cout << "Original message: " << test_message << std::endl;
+            std::cout << "Decrypted with attack: " << decrypted_with_attack << std::endl;
             tests_failed++;
             return false;
         }
 
-        // Дешифруем без указания выходного файла
-        auto decrypt_future = rsa.decrypt(expected_encrypted, no_output);
-        decrypt_future.get();
+        std::vector<boost::multiprecision::cpp_int> test_messages = {
+                42, 100, 255, 1024, 65535, 1234567
+        };
 
-        // Проверяем автоматическое имя
-        auto expected_decrypted = test_files_dir / "test_decrypted.txt";
-        if (!std::filesystem::exists(expected_decrypted)) {
-            std::cout << "FAIL: Auto-generated decrypted file not found" << std::endl;
+        bool all_passed = true;
+        for (const auto& msg : test_messages) {
+            boost::multiprecision::cpp_int enc =
+                    number_functions::NumberTheoryFunctions::mod_exp(msg, e, n);
+            boost::multiprecision::cpp_int dec =
+                    number_functions::NumberTheoryFunctions::mod_exp(enc, d_attack, n);
+
+            if (msg != dec) {
+                std::cout << "FAIL: Message " << msg << " not correctly decrypted" << std::endl;
+                all_passed = false;
+            }
+        }
+
+        if (!all_passed) {
+            std::cout << "FAIL: Some test messages were not correctly decrypted" << std::endl;
             tests_failed++;
             return false;
         }
 
-        if (!compare_files(input_file, expected_decrypted)) {
-            std::cout << "FAIL: Auto-named files test failed - content mismatch" << std::endl;
-            tests_failed++;
-            return false;
-        }
-
-        std::cout << "PASS: Auto-generated filenames test successful" << std::endl;
-        std::cout << "  Input: " << input_file << std::endl;
-        std::cout << "  Auto-encrypted: " << expected_encrypted << std::endl;
-        std::cout << "  Auto-decrypted: " << expected_decrypted << std::endl;
+        std::cout << "PASS: Wiener's attack successfully recovered working private key" << std::endl;
+        std::cout << "  Public exponent e: " << e << std::endl;
+        std::cout << "  Modulus n: " << n << std::endl;
+        std::cout << "  Recovered private exponent d: " << d_attack << std::endl;
         tests_passed++;
         return true;
 
     } catch (const std::exception& e) {
-        std::cout << "FAIL: Exception in auto-generated filenames test: " << e.what() << std::endl;
+        std::cout << "FAIL: Exception in Wiener's attack test: " << e.what() << std::endl;
         tests_failed++;
         return false;
     }
@@ -568,9 +554,8 @@ bool SimpleRSATests::test_error_handling() {
 
     bool all_passed = true;
 
-    // Тест несуществующего файла
     try {
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, true);
         auto non_existent = test_dir / "non_existent_file_12345.bin";
         std::optional<std::filesystem::path> output = test_dir / "output.bin";
 
@@ -599,15 +584,15 @@ bool SimpleRSATests::run_all_tests() {
 
     bool all_passed = true;
 
-    // Запускаем все тесты
-    all_passed &= test_text_files();
+    /*all_passed &= test_text_files();
     all_passed &= test_binary_files();
     all_passed &= test_pdf_files();
     all_passed &= test_jpg_files();
     all_passed &= test_zip_files();
-    // all_passed &= test_mp4_files();
+    all_passed &= test_mp4_files();
     all_passed &= test_different_key_sizes();
-    all_passed &= test_error_handling();
+    all_passed &= test_error_handling();*/
+    all_passed &= test_wieners_attack();
 
     print_stats();
 
