@@ -178,7 +178,7 @@ namespace rsa {
             boost::multiprecision::cpp_int n = p * q;
             boost::multiprecision::cpp_int phi_n = (p - 1) * (q - 1);
 
-
+            e = 65537;
             if (number_functions::NumberTheoryFunctions::gcd(phi_n, e) != 1) {
                 continue;
             }
@@ -223,7 +223,7 @@ namespace rsa {
             boost::multiprecision::cpp_int n = p * q;
             boost::multiprecision::cpp_int phi_n = (p - 1) * (q - 1);
 
-
+            e = 1073780833;
             if (number_functions::NumberTheoryFunctions::gcd(phi_n, e) != 1) {
                 continue;
             }

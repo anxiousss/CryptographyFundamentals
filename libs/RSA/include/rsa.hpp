@@ -32,7 +32,7 @@ namespace rsa {
 
     class RsaKeysGeneration {
     private:
-        const boost::multiprecision::cpp_int e = 65537;
+        boost::multiprecision::cpp_int e;
         size_t bit_length;
         double min_probability;
         std::shared_ptr<primality_tests::PrimalityTest> primality_test;
@@ -52,7 +52,6 @@ namespace rsa {
 
     public:
         std::pair<boost::multiprecision::cpp_int, boost::multiprecision::cpp_int> public_key;
-        std::pair<boost::multiprecision::cpp_int, boost::multiprecision::cpp_int> get_private_key();
         RSA(TestTypes type, double probability, size_t bit_length, bool vulnerability);
         std::future<std::vector<std::byte>> encrypt(const std::vector<std::byte>& data);
         std::future<void> encrypt(const std::filesystem::path& input_file,

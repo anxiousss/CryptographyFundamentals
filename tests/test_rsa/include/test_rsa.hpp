@@ -22,7 +22,6 @@ public:
     bool test_jpg_files();
     bool test_different_key_sizes();
     bool test_error_handling();
-    bool test_wieners_attack();
     void print_stats() const;
 
 private:

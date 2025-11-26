@@ -1,0 +1,3 @@
+add_library(sp_network src/sp_network.cpp)
+target_link_libraries(sp_network PUBLIC bits_functions symmetric_context)
+target_include_directories(sp_network PUBLIC include)

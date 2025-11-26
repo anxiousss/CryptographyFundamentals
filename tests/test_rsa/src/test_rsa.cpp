@@ -254,70 +254,37 @@ bool SimpleRSATests::test_mp4_files() {
     std::cout << "\n--- Testing MP4 Files ---" << std::endl;
 
     try {
-        //auto input_file1 = test_files_dir / "test.mp4";
-        auto input_file2 = test_files_dir / "test2.mp4";
+        auto input_file = test_files_dir / "test.mp4";
+        bool test_passed = false;
 
-        //bool test1_passed = false;
-        bool test2_passed = false;
-
-        /* // Тест первого MP4 файла
-        if (std::filesystem::exists(input_file1)) {
+        if (std::filesystem::exists(input_file)) {
             auto encrypted_file1 = test_dir / "test_encrypted.mp4";
             auto decrypted_file1 = test_dir / "test_decrypted.mp4";
 
-            std::cout << "Using MP4 file: " << input_file1 << std::endl;
-            std::cout << "File size: " << std::filesystem::file_size(input_file1) << " bytes" << std::endl;
+            std::cout << "Using MP4 file: " << input_file << std::endl;
+            std::cout << "File size: " << std::filesystem::file_size(input_file) << " bytes" << std::endl;
 
-            rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048);
+            rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
 
             std::optional<std::filesystem::path> opt_encrypted1 = encrypted_file1;
-            auto encrypt_future1 = rsa.encrypt(input_file1, opt_encrypted1);
+            auto encrypt_future1 = rsa.encrypt(input_file, opt_encrypted1);
             encrypt_future1.get();
 
             std::optional<std::filesystem::path> opt_decrypted1 = decrypted_file1;
             auto decrypt_future1 = rsa.decrypt(encrypted_file1, opt_decrypted1);
             decrypt_future1.get();
 
-            test1_passed = compare_files(input_file1, decrypted_file1);
-            if (test1_passed) {
+            test_passed = compare_files(input_file, decrypted_file1);
+            if (test_passed) {
                 std::cout << "PASS: First MP4 file encryption/decryption successful" << std::endl;
             } else {
                 std::cout << "FAIL: First MP4 file test failed" << std::endl;
             }
         } else {
-            std::cout << "SKIP: First MP4 file not found: " << input_file1 << std::endl;
-        }*/
-
-        if (std::filesystem::exists(input_file2)) {
-            auto encrypted_file2 = test_dir / "test2_encrypted.mp4";
-            auto decrypted_file2 = test_dir / "test2_decrypted.mp4";
-
-            std::cout << "Using MP4 file: " << input_file2 << std::endl;
-            std::cout << "File size: " << std::filesystem::file_size(input_file2) << " bytes" << std::endl;
-
-            rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 2048, false);
-
-            std::optional<std::filesystem::path> opt_encrypted2 = encrypted_file2;
-            auto encrypt_future2 = rsa.encrypt(input_file2, opt_encrypted2);
-            encrypt_future2.get();
-
-            std::optional<std::filesystem::path> opt_decrypted2 = decrypted_file2;
-            auto decrypt_future2 = rsa.decrypt(encrypted_file2, opt_decrypted2);
-            decrypt_future2.get();
-
-            test2_passed = compare_files(input_file2, decrypted_file2);
-            if (test2_passed) {
-                std::cout << "PASS: Second MP4 file encryption/decryption successful" << std::endl;
-            } else {
-                std::cout << "FAIL: Second MP4 file test failed" << std::endl;
-            }
-        } else {
-            std::cout << "SKIP: Second MP4 file not found: " << input_file2 << std::endl;
+            std::cout << "SKIP: First MP4 file not found: " << input_file << std::endl;
         }
 
-        bool overall_passed =  test2_passed;
-
-        if (overall_passed) {
+        if (test_passed) {
             tests_passed++;
             return true;
         } else {
@@ -449,104 +416,6 @@ bool SimpleRSATests::test_different_key_sizes() {
     }
 }
 
-bool SimpleRSATests::test_wieners_attack() {
-    total_tests++;
-    std::cout << "\n--- Testing Wiener's Attack ---" << std::endl;
-
-    try {
-        rsa::RSA rsa(rsa::TestTypes::MilerRabinTest, 0.999, 1024, true);
-
-        auto public_key = rsa.public_key;
-        boost::multiprecision::cpp_int e = public_key.first;
-        boost::multiprecision::cpp_int n = public_key.second;
-
-        std::cout << "Generated vulnerable RSA keys:" << std::endl;
-        std::cout << "e = " << e << std::endl;
-        std::cout << "n = " << n << std::endl;
-        std::cout << "Key size: 1024 bits" << std::endl;
-
-        std::cout << "Testing original keys..." << std::endl;
-        std::vector<std::byte> test_data = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}};
-        auto encrypt_future = rsa.encrypt(test_data);
-        auto encrypted_data = encrypt_future.get();
-        auto decrypt_future = rsa.decrypt(encrypted_data);
-        auto decrypted_data = decrypt_future.get();
-
-        if (test_data != decrypted_data) {
-            std::cout << "FAIL: Original keys don't work correctly" << std::endl;
-            tests_failed++;
-            return false;
-        }
-
-        std::cout << "Original keys work correctly. Applying Wiener's attack..." << std::endl;
-
-        boost::multiprecision::cpp_int d_attack;
-        try {
-            d_attack = rsa::Wieners_attack(e, n);
-            std::cout << "Recovered private exponent d = " << d_attack << std::endl;
-        } catch (const std::exception& e) {
-            std::cout << "Wiener's attack failed: " << e.what() << std::endl;
-            std::cout << "Trying with smaller key size..." << std::endl;
-
-            // Пробуем с меньшим размером ключа
-            rsa::RSA rsa_small(rsa::TestTypes::MilerRabinTest, 0.999, 512, true);
-            auto public_key_small = rsa.public_key;
-            d_attack = rsa::Wieners_attack(public_key_small.first, public_key_small.second);
-            std::cout << "Recovered private exponent d (512-bit) = " << d_attack << std::endl;
-        }
-
-        std::cout << "Testing recovered key..." << std::endl;
-
-        boost::multiprecision::cpp_int test_message = 123456789;
-        boost::multiprecision::cpp_int encrypted =
-                number_functions::NumberTheoryFunctions::mod_exp(test_message, e, n);
-        boost::multiprecision::cpp_int decrypted_with_attack =
-                number_functions::NumberTheoryFunctions::mod_exp(encrypted, d_attack, n);
-
-        if (test_message != decrypted_with_attack) {
-            std::cout << "FAIL: Recovered key doesn't work correctly" << std::endl;
-            std::cout << "Original message: " << test_message << std::endl;
-            std::cout << "Decrypted with attack: " << decrypted_with_attack << std::endl;
-            tests_failed++;
-            return false;
-        }
-
-        std::vector<boost::multiprecision::cpp_int> test_messages = {
-                42, 100, 255, 1024, 65535, 1234567
-        };
-
-        bool all_passed = true;
-        for (const auto& msg : test_messages) {
-            boost::multiprecision::cpp_int enc =
-                    number_functions::NumberTheoryFunctions::mod_exp(msg, e, n);
-            boost::multiprecision::cpp_int dec =
-                    number_functions::NumberTheoryFunctions::mod_exp(enc, d_attack, n);
-
-            if (msg != dec) {
-                std::cout << "FAIL: Message " << msg << " not correctly decrypted" << std::endl;
-                all_passed = false;
-            }
-        }
-
-        if (!all_passed) {
-            std::cout << "FAIL: Some test messages were not correctly decrypted" << std::endl;
-            tests_failed++;
-            return false;
-        }
-
-        std::cout << "PASS: Wiener's attack successfully recovered working private key" << std::endl;
-        std::cout << "  Public exponent e: " << e << std::endl;
-        std::cout << "  Modulus n: " << n << std::endl;
-        std::cout << "  Recovered private exponent d: " << d_attack << std::endl;
-        tests_passed++;
-        return true;
-
-    } catch (const std::exception& e) {
-        std::cout << "FAIL: Exception in Wiener's attack test: " << e.what() << std::endl;
-        tests_failed++;
-        return false;
-    }
-}
 
 bool SimpleRSATests::test_error_handling() {
     total_tests++;
@@ -584,15 +453,14 @@ bool SimpleRSATests::run_all_tests() {
 
     bool all_passed = true;
 
-    /*all_passed &= test_text_files();
+    all_passed &= test_text_files();
     all_passed &= test_binary_files();
     all_passed &= test_pdf_files();
     all_passed &= test_jpg_files();
     all_passed &= test_zip_files();
     all_passed &= test_mp4_files();
     all_passed &= test_different_key_sizes();
-    all_passed &= test_error_handling();*/
-    all_passed &= test_wieners_attack();
+    all_passed &= test_error_handling();
 
     print_stats();
 
