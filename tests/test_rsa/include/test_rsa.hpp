@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <chrono>
 
 class SimpleRSATests {
 public:
@@ -33,4 +34,7 @@ private:
     int tests_passed;
     int tests_failed;
     int total_tests;
+
+    std::chrono::milliseconds total_encryption_time;
+    std::chrono::milliseconds total_decryption_time;
 };

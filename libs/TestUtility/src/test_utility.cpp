@@ -163,7 +163,7 @@ namespace test_utils {
             );
 
             std::string file_stem = file_path.stem().string();
-            std::filesystem::path encrypted_path = base_dir / (file_stem + "_encrypted_" + algorithm_name + ".bin");
+            std::filesystem::path encrypted_path = base_dir / (file_stem + "_encrypted_" + algorithm_name + file_path.extension().string());
             std::filesystem::path decrypted_path = base_dir / (file_stem + "_decrypted_" + algorithm_name + file_path.extension().string());
 
             std::cout << "Testing " << file_type << " file: " << file_path.filename() << std::endl;
@@ -201,7 +201,7 @@ namespace test_utils {
             return success;
 
         } catch (const std::exception& e) {
-            std::cout << "✗ Exception in " << file_type << " file test: " << e.what() << std::endl;
+            std::cout << "Exception in " << file_type << " file test: " << e.what() << std::endl;
             return false;
         }
     }

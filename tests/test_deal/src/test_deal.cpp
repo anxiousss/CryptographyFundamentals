@@ -116,7 +116,7 @@ void DealTest::test_performance(const std::string& algorithm_name) {
         auto key = get_key();
         auto iv = get_iv();
 
-        std::vector<size_t> data_sizes = {16, 64, 256, 1024};
+        std::vector<size_t> data_sizes = {16, 64, 256, 1024, 4096, 16384};
 
         for (size_t size : data_sizes) {
             std::vector<std::byte> test_data(size);
@@ -140,9 +140,15 @@ void DealTest::test_performance(const std::string& algorithm_name) {
 
             bool success = compare_byte_vectors(test_data, decrypted);
 
-            std::cout << "  Size " << size << " bytes - Encrypt: " << encrypt_duration.count()
-                      << " μs, Decrypt: " << decrypt_duration.count() << " μs, Success: "
-                      << (success ? "Yes" : "No") << std::endl;
+            double encrypt_throughput = (size / 1024.0 / 1024.0) / (encrypt_duration.count() / 1000000.0);
+            double decrypt_throughput = (size / 1024.0 / 1024.0) / (decrypt_duration.count() / 1000000.0);
+
+            std::cout << "  Size " << std::setw(5) << size << " bytes - "
+                      << "Encrypt: " << std::setw(6) << encrypt_duration.count() << " ms ("
+                      << std::fixed << std::setprecision(2) << encrypt_throughput << " MB/s), "
+                      << "Decrypt: " << std::setw(6) << decrypt_duration.count() << " ms ("
+                      << std::fixed << std::setprecision(2) << decrypt_throughput << " MB/s), "
+                      << "Success: " << (success ? "Yes" : "No") << std::endl;
 
             if (!success) {
                 runner.end_test(false);
@@ -187,35 +193,48 @@ void DealTest::test_large_block_operations(const std::string& algorithm_name) {
         auto key = get_key();
         auto iv = get_iv();
 
-        std::vector<std::byte> large_data;
-        size_t total_size = 1024;
-        for (size_t i = 0; i < total_size; ++i) {
-            large_data.push_back(static_cast<std::byte>((i * 13) % 256));
+        // Тестируем с разными размерами данных
+        std::vector<size_t> test_sizes = {1024, 8192, 32768, 131072}; // 1KB, 8KB, 32KB, 128KB
+
+        for (size_t total_size : test_sizes) {
+            std::vector<std::byte> large_data(total_size);
+            for (size_t i = 0; i < total_size; ++i) {
+                large_data[i] = static_cast<std::byte>((i * 13) % 256);
+            }
+
+            auto algorithm = create_deal_algorithm(key);
+            symmetric_context::SymmetricContext algo(key, symmetric_context::EncryptionModes::CBC,
+                                                     symmetric_context::PaddingModes::PKCS7, iv, {}, std::move(algorithm));
+
+            auto encrypt_start = std::chrono::high_resolution_clock::now();
+            auto encrypted = algo.encrypt(large_data).get();
+            auto encrypt_end = std::chrono::high_resolution_clock::now();
+            auto encrypt_duration = std::chrono::duration_cast<std::chrono::microseconds>(encrypt_end - encrypt_start);
+
+            auto decrypt_start = std::chrono::high_resolution_clock::now();
+            auto decrypted = algo.decrypt(encrypted).get();
+            auto decrypt_end = std::chrono::high_resolution_clock::now();
+            auto decrypt_duration = std::chrono::duration_cast<std::chrono::microseconds>(decrypt_end - decrypt_start);
+
+            bool success = compare_byte_vectors(large_data, decrypted);
+
+            double encrypt_throughput = (total_size / 1024.0 / 1024.0) / (encrypt_duration.count() / 1000000.0);
+            double decrypt_throughput = (total_size / 1024.0 / 1024.0) / (decrypt_duration.count() / 1000000.0);
+
+            std::cout << "  " << std::setw(6) << total_size << " bytes: "
+                      << "Encrypt: " << std::setw(6) << encrypt_duration.count() << " ms ("
+                      << std::fixed << std::setprecision(2) << encrypt_throughput << " MB/s), "
+                      << "Decrypt: " << std::setw(6) << decrypt_duration.count() << " ms ("
+                      << std::fixed << std::setprecision(2) << decrypt_throughput << " MB/s), "
+                      << "Success: " << (success ? "Yes" : "No") << std::endl;
+
+            if (!success) {
+                runner.end_test(false);
+                return;
+            }
         }
 
-        auto algorithm = create_deal_algorithm(key);
-        symmetric_context::SymmetricContext algo(key, symmetric_context::EncryptionModes::CBC,
-                                                 symmetric_context::PaddingModes::PKCS7, iv, {}, std::move(algorithm));
-
-        auto encrypt_start = std::chrono::high_resolution_clock::now();
-        auto encrypted = algo.encrypt(large_data).get();
-        auto encrypt_end = std::chrono::high_resolution_clock::now();
-        auto encrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(encrypt_end - encrypt_start);
-
-        auto decrypt_start = std::chrono::high_resolution_clock::now();
-        auto decrypted = algo.decrypt(encrypted).get();
-        auto decrypt_end = std::chrono::high_resolution_clock::now();
-        auto decrypt_duration = std::chrono::duration_cast<std::chrono::milliseconds>(decrypt_end - decrypt_start);
-
-        bool success = compare_byte_vectors(large_data, decrypted);
-
-        std::cout << "Large block test: " << large_data.size() << " bytes, "
-                  << "Encrypt: " << encrypt_duration.count() << "ms, "
-                  << "Decrypt: " << decrypt_duration.count() << "ms, "
-                  << "Success: " << (success ? "Yes" : "No") << std::endl;
-
-        runner.assert_true(success, "Large block operations should work correctly with " + algorithm_name);
-        runner.end_test(success);
+        runner.end_test(true);
     } catch (const std::exception& e) {
         std::cout << "Exception: " << e.what() << std::endl;
         runner.end_test(false);
@@ -235,8 +254,6 @@ int run_all_deal_tests() {
 
     std::cout << "Running ALL DEAL Algorithm Tests" << std::endl;
     std::cout << "================================" << std::endl;
-
-    std::filesystem::create_directories("tests/test_deal/results");
 
     TestFileConfig config;
 
@@ -265,8 +282,6 @@ void run_all_deal_tests_with_custom_files(
 
     TestFileConfig config;
     config.set_custom_files(text_file, binary_file, image_file, pdf_file, zip_file, mp4_file);
-
-    std::filesystem::create_directories("tests/test_deal/results");
 
     std::cout << "Running ALL DEAL Algorithm Tests with Custom Files" << std::endl;
     std::cout << "==================================================" << std::endl;
