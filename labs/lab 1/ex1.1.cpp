@@ -8,7 +8,7 @@ int main() {
             "test_files/SMILEFACE.jpg",
             "test_files/test.pdf",
             "test_files/test.zip",
-            "test_files/test2.mp4");
+            "test_files/test.mp4");
 
     return 0;
 }

@@ -7,7 +7,7 @@ std::unique_ptr<symmetric_context::SymmetricAlgorithm> DealTest::create_deal_alg
 }
 
 void DealTest::run_all_tests(const TestFileConfig& config) {
-    std::string algo_name = "DEAL-" + std::to_string(key_size_);
+    std::string algo_name = "DEAL" + std::to_string(key_size_); // Изменено: убрано "-"
     std::cout << "Running " << algo_name << " Symmetric Algorithm Tests" << std::endl;
     std::cout << "=====================================================" << std::endl;
 
@@ -18,12 +18,12 @@ void DealTest::run_all_tests(const TestFileConfig& config) {
     test_thread_safety(algo_name);
     test_performance(algo_name);
 
-    test_file_operations(get_key(), get_iv(), create_deal_algorithm, config, "DEAL");
+    // Изменено: передаем algo_name вместо "DEAL"
+    test_file_operations(get_key(), get_iv(), create_deal_algorithm, config, algo_name);
 
     test_different_key_sizes();
     test_large_block_operations(algo_name);
 }
-
 std::vector<std::byte> DealTest::get_key() const {
     switch (key_size_) {
         case 128:
