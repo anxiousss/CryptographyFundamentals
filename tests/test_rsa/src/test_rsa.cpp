@@ -324,8 +324,8 @@ bool SimpleRSATests::test_mp4_files() {
     try {
         auto input_file = test_files_dir / "test.mp4";
         bool test_passed = false;
-        std::chrono::milliseconds encrypt_duration(0);
-        std::chrono::milliseconds decrypt_duration(0);
+        std::chrono::milliseconds encrypt_duration;
+        std::chrono::milliseconds decrypt_duration;
 
         if (std::filesystem::exists(input_file)) {
             auto encrypted_file1 = test_dir / "test_encrypted.mp4";

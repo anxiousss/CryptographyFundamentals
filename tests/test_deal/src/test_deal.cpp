@@ -7,7 +7,7 @@ std::unique_ptr<symmetric_context::SymmetricAlgorithm> DealTest::create_deal_alg
 }
 
 void DealTest::run_all_tests(const TestFileConfig& config) {
-    std::string algo_name = "DEAL" + std::to_string(key_size_); // Изменено: убрано "-"
+    std::string algo_name = "DEAL" + std::to_string(key_size_);
     std::cout << "Running " << algo_name << " Symmetric Algorithm Tests" << std::endl;
     std::cout << "=====================================================" << std::endl;
 
@@ -18,7 +18,6 @@ void DealTest::run_all_tests(const TestFileConfig& config) {
     test_thread_safety(algo_name);
     test_performance(algo_name);
 
-    // Изменено: передаем algo_name вместо "DEAL"
     test_file_operations(get_key(), get_iv(), create_deal_algorithm, config, algo_name);
 
     test_different_key_sizes();
@@ -193,8 +192,7 @@ void DealTest::test_large_block_operations(const std::string& algorithm_name) {
         auto key = get_key();
         auto iv = get_iv();
 
-        // Тестируем с разными размерами данных
-        std::vector<size_t> test_sizes = {1024, 8192, 32768, 131072}; // 1KB, 8KB, 32KB, 128KB
+        std::vector<size_t> test_sizes = {1024, 8192, 32768, 131072};
 
         for (size_t total_size : test_sizes) {
             std::vector<std::byte> large_data(total_size);

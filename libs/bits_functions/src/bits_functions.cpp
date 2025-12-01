@@ -229,12 +229,13 @@ namespace bits_functions {
 
 
     std::vector<std::byte> random_bytes_vector(size_t size_vector) {
-        std::vector<std::byte> res;
-        std::random_device device;
-        std::mt19937 gen(device());
-        std::uniform_int_distribution<unsigned char> dist(0, 255);
+        std::vector<std::byte> res(size_vector);
+
+        std::random_device rd;
+        std::uniform_int_distribution<unsigned short> dist(0, 255);
+
         for(size_t i = 0; i < size_vector; ++i) {
-            res.push_back(std::byte{dist(gen)});
+            res[i] = static_cast<std::byte>(dist(rd));
         }
         return res;
     }

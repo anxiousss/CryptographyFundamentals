@@ -337,8 +337,8 @@ namespace rsa {
                 throw std::runtime_error("Cannot create output file: " + actual_output_path.string());
             }
 
-            size_t modulus_bits = boost::multiprecision::msb(public_key.second) + 1;
-            size_t modulus_bytes = (modulus_bits + 7) / 8;
+            size_t modulus_bits = boost::multiprecision::msb(public_key.second);
+            size_t modulus_bytes = (modulus_bits + 8) / 8;
 
             OAEP oaep;
 
@@ -448,8 +448,8 @@ namespace rsa {
                 throw std::runtime_error("Cannot read original file size from encrypted file");
             }
 
-            size_t modulus_bits = boost::multiprecision::msb(private_key.second) + 1;
-            size_t modulus_bytes = (modulus_bits + 7) / 8;
+            size_t modulus_bits = boost::multiprecision::msb(private_key.second);
+            size_t modulus_bytes = (modulus_bits + 8) / 8;
 
             OAEP oaep;
             uint64_t total_blocks = 0;

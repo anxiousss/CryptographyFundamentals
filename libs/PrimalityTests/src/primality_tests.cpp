@@ -88,7 +88,11 @@ namespace primality_tests {
         }
 
         boost::random::uniform_int_distribution<boost::multiprecision::cpp_int> dist(2, p - 2);
-        boost::multiprecision::cpp_int a = dist(gen);
+        boost::multiprecision::cpp_int a;
+
+        do {
+            a = dist(gen);
+        } while (primality_witnesses.count(a) > 0);
 
         auto x = number_functions::NumberTheoryFunctions::mod_exp(a, t, p);
 
