@@ -20,7 +20,7 @@
 namespace symmetric_context {
 
     enum class EncryptionModes {
-        ECB = 0,
+        ECB,
         CBC,
         PCBC,
         CFB,
@@ -30,7 +30,7 @@ namespace symmetric_context {
     };
 
     enum class PaddingModes {
-        Zeros = 0,
+        Zeros,
         ANSIX_923,
         PKCS7,
         ISO_10126
@@ -79,6 +79,21 @@ namespace symmetric_context {
         virtual std::vector<std::byte> encrypt(const std::vector<std::byte>& block,
                                                const std::vector<std::byte>& round_key) = 0;
     };
+
+    class SubstitutionLayer {
+    public:
+        virtual ~SubstitutionLayer() = default;
+        virtual std::vector<std::byte> forward(const std::vector<std::byte>& block) = 0;
+        virtual std::vector<std::byte> inverse(const std::vector<std::byte>& block) = 0;
+    };
+
+    class PermutationLayer {
+    public:
+        virtual ~PermutationLayer() = default;
+        virtual std::vector<std::byte> forward(const std::vector<std::byte>& block) = 0;
+        virtual std::vector<std::byte> inverse(const std::vector<std::byte>& block) = 0;
+    };
+
 
     class SymmetricAlgorithm {
     public:
