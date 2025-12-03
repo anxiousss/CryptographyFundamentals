@@ -40,6 +40,8 @@ namespace bits_functions {
 
     void left_shift_28bit(std::vector<std::byte>& data, int shift);
 
+    std::vector<std::byte> left_circular_shift(const std::vector<std::byte>& data);
+
     std::vector<std::byte> expansion_e(const std::vector<std::byte>& input_32bit);
 
     std::vector<std::byte> convert_8blocks_to_6blocks(const std::vector<std::byte>& block);

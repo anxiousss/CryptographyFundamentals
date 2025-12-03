@@ -165,6 +165,13 @@ namespace bits_functions {
         }
     }
 
+    std::vector<std::byte> left_circular_shift(const std::vector<std::byte>& data) {
+        std::vector<std::byte> new_data(data.begin() + 1, data.end());
+        auto zero_el = data.front();
+        new_data.push_back(zero_el);
+        return new_data;
+    }
+
     std::vector<std::byte> expansion_e(const std::vector<std::byte>& input_32bit) {
         if (input_32bit.size() != 4) {
             throw std::invalid_argument("Expansion E requires 32-bit input (4 bytes)");

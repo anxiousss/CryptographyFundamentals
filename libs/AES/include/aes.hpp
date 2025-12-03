@@ -4,22 +4,9 @@
 namespace aes {
     const size_t block_size = 16;
 
-    class AesRoundKeyGeneration: public symmetric_context::RoundKeyGeneration {
-        const std::vector<std::byte> RCON = {
-                std::byte{0x8d}, std::byte{0x01}, std::byte{0x02}, std::byte{0x04},
-                std::byte{0x08}, std::byte{0x10}, std::byte{0x20}, std::byte{0x40},
-                std::byte{0x80}, std::byte{0x1b}, std::byte{0x36}, std::byte{0x6c},
-                std::byte{0xd8}, std::byte{0xab}, std::byte{0x4d}, std::byte{0x9a},
-                std::byte{0x2f}, std::byte{0x5e}, std::byte{0xbc}, std::byte{0x63},
-                std::byte{0xc6}, std::byte{0x97}, std::byte{0x35}, std::byte{0x6a},
-                std::byte{0xd4}, std::byte{0xb3}, std::byte{0x7d}, std::byte{0xfa},
-                std::byte{0xef}, std::byte{0xc5}, std::byte{0x91}, std::byte{0x39}
-        };
-
-        std::vector<std::vector<std::byte>> key_extension(const std::vector<std::byte>& key, size_t rounds) override;
-    };
 
     class AesSubstitutionLayer: public symmetric_context::SubstitutionLayer {
+    public:
 
         const std::vector<size_t> SHIFT_ROWS_TABLE = {0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11};
 
@@ -120,9 +107,34 @@ namespace aes {
     };
 
     class AesPermutationLayer: public symmetric_context::PermutationLayer {
+    public:
         std::vector<std::byte> forward(const std::vector<std::byte>& block) override;
         std::vector<std::byte> inverse(const std::vector<std::byte>& block) override;
     };
+
+    class AesRoundKeyGeneration: public symmetric_context::RoundKeyGeneration {
+    public:
+
+        AesSubstitutionLayer sub;
+
+        const std::vector<std::byte> RCON = {
+                std::byte{0x01},  // Round 1
+                std::byte{0x02},  // Round 2
+                std::byte{0x04},  // Round 3
+                std::byte{0x08},  // Round 4
+                std::byte{0x10},  // Round 5
+                std::byte{0x20},  // Round 6
+                std::byte{0x40},  // Round 7
+                std::byte{0x80},  // Round 8
+                std::byte{0x1B},  // Round 9
+                std::byte{0x36}   // Round 10
+        };
+
+
+
+        std::vector<std::vector<std::byte>> key_extension(const std::vector<std::byte>& key, size_t rounds) override;
+    };
+
 
     class AES: public symmetric_context::SymmetricAlgorithm {
     private:

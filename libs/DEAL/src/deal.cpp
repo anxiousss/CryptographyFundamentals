@@ -67,7 +67,7 @@ namespace deal {
                                                 K3.size()), RK5, RK5.size()));
 
             return std::vector<std::vector<std::byte>>{RK1, RK2, RK3, RK4, RK5, RK6};
-        } else {
+        } else if (key.size() == 32){
             std::vector<std::byte> K3{8};
             std::vector<std::byte> K4{8};
             std::copy(key.begin(), key.begin() + key.size() / 4, K1.begin());
