@@ -19,51 +19,6 @@ namespace bits_functions {
         b = (b & ~(std::byte(1) << n)) | (std::byte(value) << n);
     }
 
-    std::vector<std::byte> bits_permutation(const std::vector<std::byte> &msg, const std::vector<unsigned int> &IP,
-                                            PermutationRule rule) {
-        size_t n_msg = msg.size();
-        size_t msg_bits = n_msg * 8;
-
-        size_t output_bits = IP.size();
-        size_t output_bytes = (output_bits + 7) / 8;
-        std::vector<std::byte> permutation(output_bytes, std::byte{0});
-
-        bool eldest_first = (rule == PermutationRule::ELDEST_ZERO_BASED ||
-                             rule == PermutationRule::ELDEST_ONE_BASED);
-        bool one_based = (rule == PermutationRule::ELDEST_ONE_BASED ||
-                          rule == PermutationRule::YOUNGEST_ONE_BASED);
-
-        for (size_t i = 0; i < output_bits; ++i) {
-            unsigned int source_index = IP[i];
-
-            if (one_based) {
-                if (source_index == 0 || source_index > msg_bits) {
-                    throw std::out_of_range("IP index out of range with 1-based numbering");
-                }
-                source_index -= 1;
-            } else if (source_index >= msg_bits) {
-                throw std::out_of_range("IP index out of range with 0-based numbering");
-            }
-
-            auto &target_byte = permutation[i / 8];
-            unsigned int target_bit_pos = i % 8;
-
-            unsigned int source_byte_index = source_index / 8;
-            unsigned int source_bit_pos = source_index % 8;
-
-            bool bit_value;
-            if (eldest_first) {
-                bit_value = get_eldest_bit(msg[source_byte_index], source_bit_pos);
-                set_eldest_bit(target_byte, target_bit_pos, bit_value);
-            } else {
-                bit_value = get_younger_bit(msg[source_byte_index], source_bit_pos);
-                set_younger_bit(target_byte, target_bit_pos, bit_value);
-            }
-        }
-
-        return permutation;
-    }
-
     std::vector<std::byte> xor_vectors(const std::vector<std::byte> &a, const std::vector<std::byte> &b, size_t size) {
         if (a.size() < size || b.size() < size) {
             throw std::invalid_argument("Input vectors are too small for XOR operation");

@@ -67,7 +67,6 @@ namespace des {
             throw std::invalid_argument("Feistel: Invalid block or key size");
         }
 
-
         auto expanded_block = bits_functions::expansion_e(block);
         auto xored_block = bits_functions::xor_vectors(expanded_block, round_key, 6);
         auto six_bit_blocks = bits_functions::convert_8blocks_to_6blocks(xored_block);

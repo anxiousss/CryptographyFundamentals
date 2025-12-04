@@ -1,3 +1,4 @@
+#include <array>
 #include "symmetric_context.hpp"
 #include "sp_network.hpp"
 
@@ -12,7 +13,7 @@ namespace aes {
 
         const std::vector<size_t> INV_SHIFT_ROWS_TABLE = {0, 13, 10, 7, 4, 1, 14, 11, 8, 5, 2, 15, 12, 9, 6, 3};
 
-        const std::vector<std::byte> SBOX = {
+        constexpr static std::array<std::byte, 256> SBOX = {
                 std::byte{0x63}, std::byte{0x7c}, std::byte{0x77}, std::byte{0x7b}, std::byte{0xf2}, std::byte{0x6b},
                 std::byte{0x6f}, std::byte{0xc5}, std::byte{0x30}, std::byte{0x01}, std::byte{0x67}, std::byte{0x2b},
                 std::byte{0xfe}, std::byte{0xd7}, std::byte{0xab}, std::byte{0x76}, std::byte{0xca}, std::byte{0x82},
@@ -57,7 +58,7 @@ namespace aes {
                 std::byte{0x42}, std::byte{0x68}, std::byte{0x41}, std::byte{0x99}, std::byte{0x2d}, std::byte{0x0f},
                 std::byte{0xb0}, std::byte{0x54}, std::byte{0xbb}, std::byte{0x16}};
 
-        const std::vector<std::byte> INV_SBOX = {
+        static constexpr std::array<std::byte, 256> INV_SBOX = {
                 std::byte{0x52}, std::byte{0x09}, std::byte{0x6a}, std::byte{0xd5}, std::byte{0x30}, std::byte{0x36},
                 std::byte{0xa5}, std::byte{0x38}, std::byte{0xbf}, std::byte{0x40}, std::byte{0xa3}, std::byte{0x9e},
                 std::byte{0x81}, std::byte{0xf3}, std::byte{0xd7}, std::byte{0xfb}, std::byte{0x7c}, std::byte{0xe3},
@@ -102,6 +103,8 @@ namespace aes {
                 std::byte{0xd6}, std::byte{0x26}, std::byte{0xe1}, std::byte{0x69}, std::byte{0x14}, std::byte{0x63},
                 std::byte{0x55}, std::byte{0x21}, std::byte{0x0c}, std::byte{0x7d}};
 
+        static std::vector<std::byte> sub(const std::vector<std::byte>& block);
+
         std::vector<std::byte> forward(const std::vector<std::byte>& block) override;
         std::vector<std::byte> inverse(const std::vector<std::byte>& block) override;
     };
@@ -114,10 +117,7 @@ namespace aes {
 
     class AesRoundKeyGeneration: public symmetric_context::RoundKeyGeneration {
     public:
-
-        AesSubstitutionLayer sub;
-
-        const std::vector<std::byte> RCON = {
+        static constexpr std::array<std::byte, 10> RCON = {
                 std::byte{0x01},  // Round 1
                 std::byte{0x02},  // Round 2
                 std::byte{0x04},  // Round 3

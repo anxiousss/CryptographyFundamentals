@@ -1,3 +1,4 @@
+#include <array>
 #include "symmetric_context.hpp"
 #include "feistel_network.hpp"
 #include "des.hpp"
@@ -7,7 +8,7 @@ namespace deal {
 
 
     const size_t block_size = 16;
-    const std::vector<std::byte> k = {std::byte{0x12},
+    static constexpr std::array<std::byte, 8> k = {std::byte{0x12},
                                       std::byte{0x34},
                                       std::byte{0x56},
                                       std::byte{0x78},
