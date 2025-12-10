@@ -11,8 +11,20 @@ namespace primality_tests {
             throw std::invalid_argument("Invalid probability value.");
 
         size_t k = n_iterations(min_probability);
+        boost::random::uniform_int_distribution<boost::multiprecision::cpp_int> dist(2, p - 1);
+        boost::multiprecision::cpp_int a;
         for (size_t i = 0; i < k; ++i) {
-            if (iteration(p) == NumberState::COMPOSITE) return 0;
+
+            do {
+                a = dist(gen);
+            } while (primality_witnesses.count(a) > 0);
+            primality_witnesses.insert(a);
+
+            if (number_functions::NumberTheoryFunctions::gcd(a, p) != 1) {
+                return 0;
+            }
+
+            if (iteration(a, p) == NumberState::COMPOSITE) return 0;
         }
         primality_witnesses.clear();
         return prime_probability(k);
@@ -26,43 +38,25 @@ namespace primality_tests {
         return 1.0 - 1.0 / std::pow(2.0, static_cast<double>(k));
     }
 
-    NumberState FermatPrimalityTest::iteration(const boost::multiprecision::cpp_int &p) {
-        boost::random::uniform_int_distribution<boost::multiprecision::cpp_int> dist(2, p - 1);
+    NumberState FermatPrimalityTest::iteration(const boost::multiprecision::cpp_int& a,
+                                               const boost::multiprecision::cpp_int &p) {
 
-        boost::multiprecision::cpp_int a;
-        do {
-            a = dist(gen);
-            if (primality_witnesses.size() == p - 2) return NumberState::MAYBEPRIME;
-        } while (primality_witnesses.count(a) > 0);
-
-        primality_witnesses.insert(a);
-
-        if (number_functions::NumberTheoryFunctions::gcd(a, p) != 1 ||
-            number_functions::NumberTheoryFunctions::mod_exp(a, p - 1, p) != 1) {
+        if (number_functions::NumberTheoryFunctions::mod_exp(a, p - 1, p) != 1) {
             return NumberState::COMPOSITE;
         }
 
         return NumberState::MAYBEPRIME;
     }
 
-    NumberState SolovayStrassenPrimalityTest::iteration(const boost::multiprecision::cpp_int &p) {
-        boost::random::uniform_int_distribution<boost::multiprecision::cpp_int> dist(2, p - 1);
+    NumberState SolovayStrassenPrimalityTest::iteration(const boost::multiprecision::cpp_int& a,
+                                                        const boost::multiprecision::cpp_int &p) {
 
-        boost::multiprecision::cpp_int a;
+        boost::multiprecision::cpp_int jacobi = number_functions::NumberTheoryFunctions::Jacobi_symbol(a, p);
 
-        do {
-            a = dist(gen);
-        } while (primality_witnesses.count(a) > 0);
-
-        if (number_functions::NumberTheoryFunctions::gcd(a, p) != 1) {
-            return NumberState::COMPOSITE;
-        }
-
-        boost::multiprecision::cpp_int jacobi = number_functions::NumberTheoryFunctions::jacobi_symbol(a, p);
+        if (jacobi == 0) return NumberState::COMPOSITE;
 
         boost::multiprecision::cpp_int exponent = (p - 1) / 2;
         boost::multiprecision::cpp_int mod_val = number_functions::NumberTheoryFunctions::mod_exp(a, exponent, p);
-
 
         if (jacobi == 1 && mod_val != 1) {
             return NumberState::COMPOSITE;
@@ -70,14 +64,12 @@ namespace primality_tests {
         if (jacobi == -1 && mod_val != p - 1) {
             return NumberState::COMPOSITE;
         }
-        if (jacobi == 0) {
-            return NumberState::COMPOSITE;
-        }
 
         return NumberState::MAYBEPRIME;
     }
 
-    NumberState MillerRabinPrimalityTest::iteration(const boost::multiprecision::cpp_int &p) {
+    NumberState MillerRabinPrimalityTest::iteration(const boost::multiprecision::cpp_int& a,
+                                                    const boost::multiprecision::cpp_int &p) {
         boost::multiprecision::cpp_int n = p - 1;
         boost::multiprecision::cpp_int s = 0;
         boost::multiprecision::cpp_int t = n;
@@ -86,13 +78,6 @@ namespace primality_tests {
             s++;
             t /= 2;
         }
-
-        boost::random::uniform_int_distribution<boost::multiprecision::cpp_int> dist(2, p - 2);
-        boost::multiprecision::cpp_int a;
-
-        do {
-            a = dist(gen);
-        } while (primality_witnesses.count(a) > 0);
 
         auto x = number_functions::NumberTheoryFunctions::mod_exp(a, t, p);
 

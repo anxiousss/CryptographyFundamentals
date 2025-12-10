@@ -52,7 +52,7 @@ namespace number_functions {
         return result;
     }
 
-    boost::multiprecision::cpp_int NumberTheoryFunctions::legendre_symbol(const boost::multiprecision::cpp_int &a,
+    boost::multiprecision::cpp_int NumberTheoryFunctions::Legendre_symbol(const boost::multiprecision::cpp_int &a,
                                                    const boost::multiprecision::cpp_int &p) {
         if (p <= 0 || p % 2 == 0) {
             throw std::invalid_argument("Legendre symbol is defined only for positive odd n");
@@ -64,7 +64,7 @@ namespace number_functions {
         return (value == 1) ? 1 : -1;
     }
 
-    boost::multiprecision::cpp_int NumberTheoryFunctions::jacobi_symbol(const boost::multiprecision::cpp_int &a,
+    boost::multiprecision::cpp_int NumberTheoryFunctions::Jacobi_symbol(const boost::multiprecision::cpp_int &a,
                                                                         const boost::multiprecision::cpp_int &n) {
         if (n <= 0 || n % 2 == 0) {
             throw std::invalid_argument("Jacobi symbol is defined only for positive odd n");

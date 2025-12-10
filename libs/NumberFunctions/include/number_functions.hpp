@@ -8,10 +8,10 @@
 namespace number_functions {
     class NumberTheoryFunctions {
     public:
-        static boost::multiprecision::cpp_int jacobi_symbol(const boost::multiprecision::cpp_int &a,
+        static boost::multiprecision::cpp_int Jacobi_symbol(const boost::multiprecision::cpp_int &a,
                                                             const boost::multiprecision::cpp_int &b);
 
-        static boost::multiprecision::cpp_int legendre_symbol(const boost::multiprecision::cpp_int &a,
+        static boost::multiprecision::cpp_int Legendre_symbol(const boost::multiprecision::cpp_int &a,
                                                               const boost::multiprecision::cpp_int &b);
 
         static boost::multiprecision::cpp_int gcd(const boost::multiprecision::cpp_int &a,

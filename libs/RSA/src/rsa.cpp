@@ -171,31 +171,34 @@ namespace rsa {
             } while (this->primality_test->is_prime(p, min_probability) < min_probability);
 
             boost::multiprecision::cpp_int q;
+            bool passed_fermat;
             do {
                 q = dist(rd);
-            } while (this->primality_test->is_prime(q, min_probability) < min_probability || q == p);
+                passed_fermat = boost::multiprecision::abs(p - q) > (boost::multiprecision::cpp_int{1} << (bit_length / 2 - 1));
+            } while (this->primality_test->is_prime(q, min_probability) < min_probability || q == p || !passed_fermat);
 
             boost::multiprecision::cpp_int n = p * q;
             boost::multiprecision::cpp_int phi_n = (p - 1) * (q - 1);
 
-            e = 65537;
-            if (number_functions::NumberTheoryFunctions::gcd(phi_n, e) != 1) {
-                continue;
-            }
+            boost::random::uniform_int_distribution<boost::multiprecision::cpp_int>
+                    e_dist(3, phi_n - 1);
+            while (true) {
+                do {
+                    e = e_dist(rd);
+                    if (e % 2 == 0)
+                        e += 1;
+                } while (number_functions::NumberTheoryFunctions::gcd(phi_n, e) != 1);
 
-            auto [gcd_val, d, y] = number_functions::NumberTheoryFunctions::extended_gcd(e, phi_n);
-            d = d % phi_n;
-            if (d < 0) {
-                d += phi_n;
-            }
+                auto [gcd_val, d, y] = number_functions::NumberTheoryFunctions::extended_gcd(e, phi_n);
+                d = d % phi_n;
+                if (d < 0) {
+                    d += phi_n;
+                }
 
-
-            bool passed_fermat = boost::multiprecision::abs(p - q) > (boost::multiprecision::cpp_int{1} << (bit_length / 2 - 1));
-            bool passed_wiener = boost::multiprecision::pow(d, 4) > (n / 81);
-
-
-            if (passed_fermat && passed_wiener) {
-                return std::make_pair(std::make_pair(e, n), std::make_pair(d, n));
+                bool passed_wiener = boost::multiprecision::pow(d, 4) > (n / 81);
+                if (passed_wiener) {
+                    return std::make_pair(std::make_pair(e, n), std::make_pair(d, n));
+                }
             }
         }
     }
@@ -223,18 +226,23 @@ namespace rsa {
             boost::multiprecision::cpp_int n = p * q;
             boost::multiprecision::cpp_int phi_n = (p - 1) * (q - 1);
 
-            e = 1073780833;
-            if (number_functions::NumberTheoryFunctions::gcd(phi_n, e) != 1) {
-                continue;
-            }
+            boost::random::uniform_int_distribution<boost::multiprecision::cpp_int>
+                    e_dist(3, phi_n - 1);
+            while (true) {
+                do {
+                    e = e_dist(rd);
+                    if (e % 2 == 0)
+                        e += 1;
+                } while (number_functions::NumberTheoryFunctions::gcd(phi_n, e) != 1);
 
-            auto [gcd_val, d, y] = number_functions::NumberTheoryFunctions::extended_gcd(e, phi_n);
-            d = d % phi_n;
-            if (d < 0) {
-                d += phi_n;
-            }
+                auto [gcd_val, d, y] = number_functions::NumberTheoryFunctions::extended_gcd(e, phi_n);
+                d = d % phi_n;
+                if (d < 0) {
+                    d += phi_n;
+                }
 
-            return std::make_pair(std::make_pair(e, n), std::make_pair(d, n));
+                return std::make_pair(std::make_pair(e, n), std::make_pair(d, n));
+            }
         }
     }
 

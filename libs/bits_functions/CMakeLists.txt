@@ -1,3 +1,2 @@
-
-add_library(bits_functions src/bits_functions.cpp)
+add_library(bits_functions SHARED src/bits_functions.cpp)
 target_include_directories(bits_functions PUBLIC include)
