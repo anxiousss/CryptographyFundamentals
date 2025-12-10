@@ -272,6 +272,10 @@ namespace rsa {
                 throw std::runtime_error("Message too large for modulus");
             }
 
+            if (number_functions::NumberTheoryFunctions::gcd(msg, public_key.second) != 1) {
+                throw std::runtime_error("Message is not coprime with modulus N");
+            }
+
             boost::multiprecision::cpp_int number_cipher_text =
                     number_functions::NumberTheoryFunctions::mod_exp(msg, public_key.first, public_key.second);
 
@@ -382,6 +386,10 @@ namespace rsa {
 
                     if (msg_int >= public_key.second) {
                         throw std::runtime_error("Padded message too large for modulus");
+                    }
+
+                    if (number_functions::NumberTheoryFunctions::gcd(msg_int, public_key.second) != 1) {
+                        throw std::runtime_error("Padded message is not coprime with modulus N");
                     }
 
                     boost::multiprecision::cpp_int encrypted_int =
