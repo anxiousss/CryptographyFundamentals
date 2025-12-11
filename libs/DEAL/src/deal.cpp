@@ -22,16 +22,20 @@ namespace deal {
 
     std::vector<std::vector<std::byte>> DealRoundKeyGeneration::key_extension(const std::vector<std::byte> &key,
                                                                               size_t rounds) {
-        std::shared_ptr<des::DES> des_alg = std::make_shared<des::DES>(k, std::make_shared<des::DesRoundKeyGeneration>(),
-                std::make_shared<des::FeistelTransformation>());
-        std::vector<std::byte> K1{8};
-        std::vector<std::byte> K2{8};
+        std::vector<std::byte> k_vector(k.begin(), k.end());
+        std::shared_ptr<des::DES> des_alg = std::make_shared<des::DES>(k_vector,
+                                                                       std::make_shared<des::DesRoundKeyGeneration>(),
+                                                                       std::make_shared<des::FeistelTransformation>());
+
+        std::vector<std::byte> K1(8);
+        std::vector<std::byte> K2(8);
+
         if (key.size() == 16) {
             std::copy(key.begin(), key.begin() + key.size() / 2, K1.begin());
             std::copy(key.begin() + key.size() / 2, key.end(), K2.begin());
             std::vector<std::byte> RK1 = des_alg->encrypt(K1);
             std::vector<std::byte> RK2 = des_alg->encrypt(bits_functions::xor_vectors(K2,
-                                                                                     RK1, K2.size()));
+                                                                                      RK1, K2.size()));
             std::vector<std::byte> RK3 = des_alg->encrypt(bits_functions::xor_vectors(
                     bits_functions::xor_vectors(K1, magic_64bit_number(1),
                                                 K1.size()), RK2, RK2.size()));
@@ -47,7 +51,7 @@ namespace deal {
 
             return std::vector<std::vector<std::byte>>{RK1, RK2, RK3, RK4, RK5, RK6};
         } else if (key.size() == 24) {
-            std::vector<std::byte> K3{8};
+            std::vector<std::byte> K3(8);
             std::copy(key.begin(), key.begin() + key.size() / 3, K1.begin());
             std::copy(key.begin() + key.size() / 3, key.begin() + 2 * (key.size() / 3), K2.begin());
             std::copy(key.begin() + 2 * (key.size() / 3), key.end(), K3.begin());
@@ -67,9 +71,9 @@ namespace deal {
                                                 K3.size()), RK5, RK5.size()));
 
             return std::vector<std::vector<std::byte>>{RK1, RK2, RK3, RK4, RK5, RK6};
-        } else if (key.size() == 32){
-            std::vector<std::byte> K3{8};
-            std::vector<std::byte> K4{8};
+        } else if (key.size() == 32) {
+            std::vector<std::byte> K3(8);
+            std::vector<std::byte> K4(8);
             std::copy(key.begin(), key.begin() + key.size() / 4, K1.begin());
             std::copy(key.begin() + key.size() / 4, key.begin() + 2 * (key.size() / 4), K2.begin());
             std::copy(key.begin() + 2 * (key.size() / 4), key.begin() + 3 * (key.size() / 4), K3.begin());
@@ -95,19 +99,23 @@ namespace deal {
                                                 K4.size()), RK7, RK7.size()));
             return std::vector<std::vector<std::byte>>{RK1, RK2, RK3, RK4, RK5, RK6, RK7, RK8};
         }
+
+        throw std::runtime_error("Unsupported key size for DEAL algorithm");
     }
 
     std::vector<std::byte> DesTransformation::encrypt(const std::vector<std::byte> &block,
                                                       const std::vector<std::byte> &round_key) {
-        des::DES des_alg(round_key, std::make_shared<des::DesRoundKeyGeneration>(),
-                std::make_shared<des::FeistelTransformation>());
+        std::vector<std::byte> round_key_vector(round_key.begin(), round_key.end());
+        des::DES des_alg(round_key_vector, std::make_shared<des::DesRoundKeyGeneration>(),
+                         std::make_shared<des::FeistelTransformation>());
         return des_alg.encrypt(block);
     }
 
     DEAL::DEAL(const std::vector<std::byte> &key_, std::shared_ptr<DealRoundKeyGeneration> deal_round_key_generation,
-               std::shared_ptr<DesTransformation> des_transformation): key(std::move(key_)), feistel_network(key_,
-               set_rounds(key_), deal_round_key_generation,
-               des_transformation) {}
+               std::shared_ptr<DesTransformation> des_transformation):
+               key(std::move(key_)), feistel_network(key_,set_rounds(key_),
+                                                     deal_round_key_generation,
+                                     des_transformation) {}
 
     void DEAL::set_key(const std::vector<std::byte> &key) {
         this->key = key;

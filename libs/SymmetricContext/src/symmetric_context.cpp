@@ -203,14 +203,12 @@ namespace symmetric_context {
                                                 std::optional<std::filesystem::path>& output_file) {
         return std::async(std::launch::async, [this, input_file, output_file]() {
             std::lock_guard<std::mutex> lock(mutex);
-
             if (!std::filesystem::exists(input_file)) {
                 throw std::runtime_error("Input file does not exist: " + input_file.string());
             }
 
             std::filesystem::path actual_output_path = output_file.value_or(
                     input_file.parent_path() / (input_file.stem().string() + "_encrypted" + input_file.extension().string()));
-
             std::filesystem::create_directories(actual_output_path.parent_path());
 
             std::ifstream in_file(input_file, std::ios::binary);
@@ -223,22 +221,48 @@ namespace symmetric_context {
                 throw std::runtime_error("Cannot open output file: " + actual_output_path.string());
             }
 
+            size_t block_size = encryption_mode->get_block_size();
+            size_t buffer_size = 4096;
+            buffer_size = (buffer_size / block_size) * block_size;
+            if (buffer_size == 0) buffer_size = block_size;
+
             in_file.seekg(0, std::ios::end);
             size_t file_size = in_file.tellg();
             in_file.seekg(0, std::ios::beg);
 
             if (file_size == 0) {
-                std::cout << "Input file is empty: " << input_file << std::endl;
+                auto padded_empty = apply_padding({});
+                out_file.write(reinterpret_cast<const char*>(padded_empty.data()), padded_empty.size());
+                std::cout << "Encrypted empty file: " << input_file << " -> " << actual_output_path << std::endl;
                 return;
             }
 
-            std::vector<std::byte> file_data(file_size);
-            in_file.read(reinterpret_cast<char*>(file_data.data()), file_size);
+            std::vector<std::byte> buffer(buffer_size);
+            size_t total_processed = 0;
 
-            auto padded_data = apply_padding(file_data);
-            auto encrypted_data = encryption_mode->encrypt(padded_data);
+            while (total_processed < file_size) {
+                size_t remaining = file_size - total_processed;
+                size_t to_read = std::min(buffer_size, remaining);
 
-            out_file.write(reinterpret_cast<const char*>(encrypted_data.data()), encrypted_data.size());
+                in_file.read(reinterpret_cast<char*>(buffer.data()), to_read);
+                size_t bytes_read = in_file.gcount();
+
+                if (bytes_read == 0) break;
+
+                total_processed += bytes_read;
+
+                if (total_processed == file_size) {
+                    std::vector<std::byte> last_chunk(buffer.begin(), buffer.begin() + bytes_read);
+                    auto padded_chunk = apply_padding(last_chunk);
+                    auto encrypted_data = encryption_mode->encrypt(padded_chunk);
+                    out_file.write(reinterpret_cast<const char*>(encrypted_data.data()), encrypted_data.size());
+                } else {
+                    std::vector<std::byte> chunk(buffer.begin(), buffer.begin() + bytes_read);
+                    auto encrypted_data = encryption_mode->encrypt(chunk);
+                    out_file.write(reinterpret_cast<const char*>(encrypted_data.data()), encrypted_data.size());
+                }
+            }
+
             std::cout << "File encrypted: " << input_file << " -> " << actual_output_path << std::endl;
         });
     }
@@ -265,10 +289,8 @@ namespace symmetric_context {
             if (stem.length() > 10 && stem.substr(stem.length() - 10) == "_encrypted") {
                 stem = stem.substr(0, stem.length() - 10);
             }
-
             std::filesystem::path actual_output_path = output_file.value_or(
                     input_file.parent_path() / (stem + "_decrypted" + input_file.extension().string()));
-
             std::filesystem::create_directories(actual_output_path.parent_path());
 
             std::ifstream in_file(input_file, std::ios::binary);
@@ -278,6 +300,10 @@ namespace symmetric_context {
                 throw std::runtime_error("Cannot open input or output file");
             }
 
+            size_t block_size = encryption_mode->get_block_size();
+            size_t buffer_size = 4096;
+            buffer_size = (buffer_size / block_size) * block_size;
+            if (buffer_size == 0) buffer_size = block_size;
             in_file.seekg(0, std::ios::end);
             size_t file_size = in_file.tellg();
             in_file.seekg(0, std::ios::beg);
@@ -287,12 +313,30 @@ namespace symmetric_context {
                 return;
             }
 
-            std::vector<std::byte> encrypted_data(file_size);
-            in_file.read(reinterpret_cast<char*>(encrypted_data.data()), file_size);
+            std::vector<std::byte> buffer(buffer_size);
+            size_t total_processed = 0;
+            std::vector<std::byte> final_chunk;
 
-            auto decrypted_data = encryption_mode->decrypt(encrypted_data);
-            auto unpadded_data = remove_padding(decrypted_data);
-            out_file.write(reinterpret_cast<const char*>(unpadded_data.data()), unpadded_data.size());
+            while (total_processed < file_size) {
+                size_t remaining = file_size - total_processed;
+                size_t to_read = std::min(buffer_size, remaining);
+
+                in_file.read(reinterpret_cast<char *>(buffer.data()), to_read);
+                size_t bytes_read = in_file.gcount();
+
+                if (bytes_read == 0) break;
+                total_processed += bytes_read;
+
+                std::vector<std::byte> chunk(buffer.begin(), buffer.begin() + bytes_read);
+                auto decrypted_chunk = encryption_mode->decrypt(chunk);
+
+                if (total_processed == file_size) {
+                    auto unpadded_data = remove_padding(decrypted_chunk);
+                    out_file.write(reinterpret_cast<const char *>(unpadded_data.data()), unpadded_data.size());
+                } else {
+                    out_file.write(reinterpret_cast<const char *>(decrypted_chunk.data()), decrypted_chunk.size());
+                }
+            }
 
             std::cout << "File decrypted: " << input_file << " -> " << actual_output_path << std::endl;
         });
@@ -672,7 +716,6 @@ namespace symmetric_context {
 
                     std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
 
-                    // Каждый блок получает уникальное значение счетчика на основе его индекса
                     auto counter_value = bits_functions::add_number_to_bytes(iv, block_idx);
                     auto encrypted_counter = algorithm->encrypt(counter_value);
 
