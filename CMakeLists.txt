@@ -10,8 +10,8 @@ find_package(OpenSSL REQUIRED)
 
 add_compile_options(-O3)
 
-add_subdirectory(libs/AES)
-add_subdirectory(libs/SpNetwork)
+add_subdirectory(libs/Rijndael)
+add_subdirectory(libs/GaloisFields)
 add_subdirectory(libs/bits_functions)
 add_subdirectory(libs/SymmetricContext)
 add_subdirectory(libs/FeistelNetwork)
@@ -37,4 +37,4 @@ target_link_libraries(lab1t1 test_utility test_des symmetric_context feistel_net
 target_link_libraries(lab1t2 test_utility test_triple_des triple_des symmetric_context feistel_network des)
 target_link_libraries(lab1t3 test_utility test_deal symmetric_context feistel_network des deal)
 target_link_libraries(lab2 test_rsa bits_functions number_functions number_functions rsa)
-target_link_libraries(lab3 test_utility symmetric_context aes sp_network)
+target_link_libraries(lab3 test_utility symmetric_context aes)
