@@ -2,6 +2,15 @@
 
 namespace bits_functions {
 
+    void print_byte_vector(const std::vector<std::byte>& data) {
+        std::cout << "Vector size: " << data.size() << " [";
+        for (size_t i = 0; i < std::min(data.size(), size_t(10)); ++i) {
+            std::cout << std::hex << static_cast<int>(data[i]) << " ";
+        }
+        if (data.size() > 10) std::cout << "...";
+        std::cout << "]" << std::dec << std::endl;
+    }
+
 
     void set_eldest_bit(std::byte &b, size_t n, bool value) {
         b = (b & ~(std::byte(0x80) >> n)) | (std::byte(value ? 0x80 : 0x00) >> n);
@@ -30,6 +39,40 @@ namespace bits_functions {
         for (size_t i = 0; i < size; ++i) {
             result.push_back(a[i] ^ b[i]);
         }
+
+        return result;
+    }
+
+    int polynomial_degree(uint16_t poly) {
+        if (poly == 0) return -1;
+        return std::bit_width(poly) - 1;
+    }
+
+    uint16_t bytes_to_uint16_be(const std::vector<std::byte>& data) {
+        if (data.size() < sizeof(uint16_t)) {
+            throw std::invalid_argument("Not enough bytes");
+        }
+        uint16_t result = 0;
+        for (size_t i = 0; i < data.size() * 8; ++i) {
+            bool bit = get_eldest_bit(data[i / 8], i % 8);
+            if (bit == 1)
+                result += std::pow(2, i);
+        }
+        return result;
+    }
+
+    std::vector<std::byte> uint16_to_bytes_be(uint16_t value) {
+        std::vector<std::byte> result;
+        auto reverse_bits = [](uint8_t b) -> uint8_t {
+            b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+            b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+            b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+            return b;
+        };
+
+
+        result.push_back(std::byte{reverse_bits(static_cast<uint8_t>(value & 0xFF))});
+        result.push_back(std::byte{reverse_bits(static_cast<uint8_t>((value >> 8) & 0xFF))});
 
         return result;
     }
@@ -134,7 +177,7 @@ namespace bits_functions {
 
         std::vector<std::byte> result(6, std::byte{0});
 
-        std::vector<int> E_TABLE = {
+        std::array<int, 48> E_TABLE = {
                 32,  1,  2,  3,  4,  5,
                 4,  5,  6,  7,  8,  9,
                 8,  9, 10, 11, 12, 13,
@@ -218,7 +261,8 @@ namespace bits_functions {
 
         return result;
     }
-    std::ostream &operator<<(std::ostream &os, std::byte b) {
-        return os << std::bitset<8>(std::to_integer<int>(b));
-    }
+}
+
+std::ostream &operator<<(std::ostream &os, std::byte b) {
+    return os << std::bitset<8>(std::to_integer<int>(b));
 }

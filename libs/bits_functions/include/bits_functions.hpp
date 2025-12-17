@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cstddef>
 #include <vector>
+#include <array>
+#include <bit>
 #include <cstdint>
 #include <random>
 
@@ -15,7 +17,7 @@ namespace bits_functions {
         YOUNGEST_ONE_BASED
     };
 
-
+    void print_byte_vector(const std::vector<std::byte>& data);
 
     void set_eldest_bit(std::byte &b, size_t n, bool value);
 
@@ -26,6 +28,12 @@ namespace bits_functions {
     void set_younger_bit(std::byte &b, size_t n, bool value);
 
     std::vector<std::byte> xor_vectors(const std::vector<std::byte> &a, const std::vector<std::byte> &b, size_t size);
+
+    int polynomial_degree(uint16_t poly);
+
+    uint16_t bytes_to_uint16_be(const std::vector<std::byte>& bytes);
+
+    std::vector<std::byte> uint16_to_bytes_be(uint16_t value);
 
     template<size_t TableSize>
     std::vector<std::byte>
@@ -85,7 +93,6 @@ namespace bits_functions {
 
     void left_shift_28bit(std::vector<std::byte>& data, int shift);
 
-    std::vector<std::byte> left_circular_shift(const std::vector<std::byte>& data);
 
     std::vector<std::byte> expansion_e(const std::vector<std::byte>& input_32bit);
 

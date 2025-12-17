@@ -1,13 +1,5 @@
 #include "des.hpp"
 
-void print_byte_vector(const std::vector<std::byte>& data) {
-    std::cout << "Vector size: " << data.size() << " [";
-    for (size_t i = 0; i < std::min(data.size(), size_t(10)); ++i) {
-        std::cout << std::hex << static_cast<int>(data[i]) << " ";
-    }
-    if (data.size() > 10) std::cout << "...";
-    std::cout << "]" << std::dec << std::endl;
-}
 
 namespace des {
 

@@ -1,3 +1,3 @@
-add_library(symmetric_context src/symmetric_context.cpp)
+add_library(symmetric_context SHARED src/symmetric_context.cpp)
 target_link_libraries(symmetric_context PUBLIC bits_functions)
 target_include_directories(symmetric_context PUBLIC include)

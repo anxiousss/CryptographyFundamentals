@@ -1,17 +1,22 @@
 #include <vector>
 #include <cstddef>
+#include <cstring>
+#include <bit>
+#include <map>
+#include "bits_functions.hpp"
 
 namespace galois_fields {
 
     class GaloisField {
     private:
-        GaloisField add(const GaloisField& other) const;
-        GaloisField multiply(const GaloisField& other) const;
-        GaloisField multiplicative_inverse(const GaloisField& other) const;
+        static std::vector<std::byte> add(const std::vector<std::byte>& a, const std::vector<std::byte>& b);
+        static GaloisField multiply(const std::vector<std::byte>& a, const std::vector<std::byte>& b, const std::vector<std::byte>& mod);
+        static GaloisField multiplicative_inverse(const std::vector<std::byte>& a, const std::vector<std::byte>& mod);
+
     public:
-        std::vector<std::byte> element;
-        GaloisField operator+(const GaloisField& other) const;
-        GaloisField operator*(const GaloisField& other) const;
-        std::vector<std::byte> find_irreducible_polynomials() const;
+        static void print_table();
+        static void print_element(const std::vector<std::byte>& el);
+        static std::vector<std::byte> divide(const std::vector<std::byte>& a, const std::vector<std::byte>& b);
+        static std::map<size_t, std::vector<std::vector<std::byte>>> find_irreducible_polynomials();
     };
 }

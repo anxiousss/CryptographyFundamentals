@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(CryptographyFundamentals)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 find_package(Boost REQUIRED COMPONENTS filesystem random system)
@@ -37,4 +37,4 @@ target_link_libraries(lab1t1 test_utility test_des symmetric_context feistel_net
 target_link_libraries(lab1t2 test_utility test_triple_des triple_des symmetric_context feistel_network des)
 target_link_libraries(lab1t3 test_utility test_deal symmetric_context feistel_network des deal)
 target_link_libraries(lab2 test_rsa bits_functions number_functions number_functions rsa)
-target_link_libraries(lab3 test_utility symmetric_context aes)
+target_link_libraries(lab3 galois_fields rijndael)
