@@ -39,8 +39,10 @@ namespace galois_fields {
     }
 
     std::map<size_t, std::vector<std::vector<std::byte>>> GaloisField::find_irreducible_polynomials() {
-        std::map<size_t, std::vector<std::vector<std::byte>>> polynominals = {{1, {{std::byte{0b01000000}},
-                                                                                        {std::byte{0b11000000}}}}};
+        std::map<size_t, std::vector<std::vector<std::byte>>> polynominals = {{1, {{std::byte{0b01000000}, std::byte{0x00}},
+                                                                                        {std::byte{0b11000000}, std::byte{0x00}}}}};
+
+
 
         for (uint16_t d = 2; d <= 8; ++d) {
             uint16_t start = 1 << d;
@@ -51,10 +53,11 @@ namespace galois_fields {
 
                 bool is_irreducible = true;
                 std::vector<std::byte> polynominal = bits_functions::uint16_to_bytes_be(i);
+
                 for (size_t k = 1; k <= d / 2; ++k) {
-                    for (auto Q: polynominals[k]) {
-                        if (Q.size() == 1) Q.push_back(std::byte{0x00});
-                        if (GaloisField::divide(polynominal, Q) == std::vector{std::byte{0x00}}) {
+                    auto& Q = polynominals[k];
+                    for (size_t j = 0; j < Q.size(); ++j) {
+                        if (GaloisField::divide(polynominal, Q[j]) == std::vector{std::byte{0x00}, std::byte{0x00}} ) {
                             is_irreducible = false;
                             break;
                         }
@@ -66,7 +69,6 @@ namespace galois_fields {
                 if (is_irreducible) {
                     if (!polynominals.contains(d))
                         polynominals[d] = {};
-
                     polynominals[d].push_back(polynominal);
                 }
             }
@@ -84,5 +86,39 @@ namespace galois_fields {
                 print_element(poly);
             }
         }
+    }
+
+    std::vector<std::byte>  GaloisField::multiply(const std::vector<std::byte> &a, const std::vector<std::byte> &b,
+                                      const std::vector<std::byte> &mod) {
+
+        std::vector<std::byte> mul(2);
+        std::vector<size_t> indices(16, 0);
+            for (size_t i = 0; i < 8; ++i) {
+            auto a_bit = bits_functions::get_eldest_bit(a[0], i);
+            for (size_t j = 0; j < 8; ++j) {
+                auto b_bit = bits_functions::get_eldest_bit(b[0], j);
+                indices[i + j] += a_bit * b_bit;;
+            }
+        }
+
+        for (int i = 0; i < 16; ++i) {
+            bits_functions::set_eldest_bit(mul[i / 8], i % 8, indices[i] % 2);
+        }
+
+
+
+        return GaloisField::divide(mul, mod);
+    }
+
+    std::vector<std::byte>
+    GaloisField::multiplicative_inverse(const std::vector<std::byte> &a, const std::vector<std::byte> &mod) {
+        if (a == std::vector{std::byte{0x00}, std::byte{0x00}})
+            return std::vector{std::byte{0x00}, std::byte{0x00}};
+
+        auto [r, s, q] = number_functions::NumberTheoryFunctions::extended_gcd(
+                number_functions::NumberTheoryFunctions::bytes_to_cpp_int(a),
+                number_functions::NumberTheoryFunctions::bytes_to_cpp_int(mod));
+
+        return
     }
 }

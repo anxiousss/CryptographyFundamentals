@@ -1,3 +1,3 @@
 add_library(galois_fields SHARED src/galois_fields.cpp include/galois_fields.hpp)
-target_link_libraries(galois_fields PUBLIC bits_functions)
+target_link_libraries(galois_fields PUBLIC bits_functions number_functions)
 target_include_directories(galois_fields PUBLIC include)

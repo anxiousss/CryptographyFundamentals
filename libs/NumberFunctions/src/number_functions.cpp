@@ -2,6 +2,26 @@
 
 namespace number_functions {
 
+    constexpr unsigned char reverse_bits(unsigned char b) {
+        b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+        b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+        b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+        return b;
+    }
+
+    boost::multiprecision::cpp_int  NumberTheoryFunctions::bytes_to_cpp_int(const std::vector<std::byte>& data) {
+        boost::multiprecision::cpp_int result = 0;
+        boost::multiprecision::cpp_int base = 1;
+
+        for (std::byte b : data) {
+            unsigned char byte_val = static_cast<unsigned char>(b);
+            unsigned char reversed_byte = reverse_bits(byte_val);
+            result += static_cast<boost::multiprecision::cpp_int>(reversed_byte) * base;
+            base <<= 8;
+        }
+        return result;
+    }
+
     boost::multiprecision::cpp_int NumberTheoryFunctions::gcd(const boost::multiprecision::cpp_int &a,
                                                               const boost::multiprecision::cpp_int &b) {
         boost::multiprecision::cpp_int x = a, y = b;
