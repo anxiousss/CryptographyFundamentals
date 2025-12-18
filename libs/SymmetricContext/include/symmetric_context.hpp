@@ -80,21 +80,6 @@ namespace symmetric_context {
                                                const std::vector<std::byte>& round_key) = 0;
     };
 
-    class SubstitutionLayer {
-    public:
-        virtual ~SubstitutionLayer() = default;
-        virtual std::vector<std::byte> forward(const std::vector<std::byte>& block) = 0;
-        virtual std::vector<std::byte> inverse(const std::vector<std::byte>& block) = 0;
-    };
-
-    class PermutationLayer {
-    public:
-        virtual ~PermutationLayer() = default;
-        virtual std::vector<std::byte> forward(const std::vector<std::byte>& block) = 0;
-        virtual std::vector<std::byte> inverse(const std::vector<std::byte>& block) = 0;
-    };
-
-
     class SymmetricAlgorithm {
     public:
         virtual ~SymmetricAlgorithm() = default;

@@ -17,7 +17,11 @@ namespace bits_functions {
         YOUNGEST_ONE_BASED
     };
 
+    uint8_t reverse_bits(uint8_t b);
+
     void print_byte_vector(const std::vector<std::byte>& data);
+
+    void print_le(const std::vector<std::byte>& data);
 
     void set_eldest_bit(std::byte &b, size_t n, bool value);
 
@@ -33,9 +37,11 @@ namespace bits_functions {
 
     std::pair<uint16_t, uint16_t> divide_with_quotient(uint16_t poly1, uint16_t poly2);
 
-    uint16_t bytes_to_uint16_be(const std::vector<std::byte>& bytes);
+    std::byte cyclic_shift_left(const std::byte &first, size_t amount);
 
-    std::vector<std::byte> uint16_to_bytes_be(uint16_t value);
+    uint16_t bytes_to_uint16(const std::vector<std::byte>& bytes);
+
+    std::vector<std::byte> uint16_to_bytes(uint16_t value);
 
     template<size_t TableSize>
     std::vector<std::byte>

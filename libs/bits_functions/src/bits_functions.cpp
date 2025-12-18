@@ -2,13 +2,34 @@
 
 namespace bits_functions {
 
+    uint8_t reverse_bits(uint8_t b){
+        b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+        b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+        b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+        return b;
+    };
+
     void print_byte_vector(const std::vector<std::byte>& data) {
         std::cout << "Vector size: " << data.size() << " [";
         for (size_t i = 0; i < std::min(data.size(), size_t(10)); ++i) {
-            std::cout <<  static_cast<int>(data[i]) << " ";
+            std::cout << std::hex << static_cast<int>(data[i]) << " ";
         }
         if (data.size() > 10) std::cout << "...";
         std::cout << "]" << std::dec << std::endl;
+    }
+
+    void print_le(const std::vector<std::byte>& data) {
+        int hex = 0;
+
+        for (int i = 0; i < data.size() * 8; ++i) {
+            auto bit = get_eldest_bit(data[i / 8], i % 8);
+            hex += bit * std::pow(2, i);
+            if (i % 8 == 7 && i != 0) {
+                std::cout << std::hex << hex << ' ';
+                hex = 0;
+            }
+        }
+        std::cout << std::endl;
     }
 
 
@@ -73,7 +94,7 @@ namespace bits_functions {
     }
 
 
-    uint16_t bytes_to_uint16_be(const std::vector<std::byte>& data) {
+    uint16_t bytes_to_uint16(const std::vector<std::byte>& data) {
         if (data.size() < sizeof(uint16_t)) {
             throw std::invalid_argument("Not enough bytes");
         }
@@ -86,20 +107,20 @@ namespace bits_functions {
         return result;
     }
 
-    std::vector<std::byte> uint16_to_bytes_be(uint16_t value) {
+    std::vector<std::byte> uint16_to_bytes(uint16_t value) {
         std::vector<std::byte> result;
-        auto reverse_bits = [](uint8_t b) -> uint8_t {
-            b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-            b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-            b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-            return b;
-        };
 
-
-        result.push_back(std::byte{reverse_bits(static_cast<uint8_t>(value & 0xFF))});
-        result.push_back(std::byte{reverse_bits(static_cast<uint8_t>((value >> 8) & 0xFF))});
+        result.push_back(std::byte{static_cast<uint8_t>(value & 0xFF)});
+        result.push_back(std::byte{static_cast<uint8_t>((value >> 8) & 0xFF))});
 
         return result;
+    }
+
+    std::byte cyclic_shift_left(const std::byte &first, size_t amount) {
+        uint8_t value = static_cast<uint8_t>(first);
+        amount %= 8;
+        uint8_t result = (value << amount) | (value >> (8 - amount));
+        return static_cast<std::byte>(result);
     }
 
     std::vector<std::byte> add_number_to_bytes(const std::vector<std::byte> &data, uint64_t number) {

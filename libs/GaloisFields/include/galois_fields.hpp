@@ -10,26 +10,25 @@ namespace galois_fields {
 
     class GaloisField {
     public:
-        static std::vector<std::byte> mod_exp(const std::vector<std::byte>& base,
-                                              int exp, const std::vector<std::byte>& mod);
+//        static std::byte mod_exp(const std::byte& base, int exp, const std::byte& mod);
 
-        static std::vector<std::byte> add(const std::vector<std::byte>& a, const std::vector<std::byte>& b);
+        static std::byte add(const std::byte& first, const std::byte& second);
 
-        static std::vector<std::byte>  multiply(const std::vector<std::byte>& a,
-                                                const std::vector<std::byte>& b, const std::vector<std::byte>& mod);
+//        static std::byte  multiply(const std::byte& a,
+//                                                const std::byte& b, const std::byte& mod);
 
-        static std::vector<std::byte>  multiplicative_inverse(const std::vector<std::byte>& a,
-                                                              const std::vector<std::byte>& mod);
+//        static std::byte  multiplicative_inverse(const std::byte& a,
+//                                                              const std::byte& mod);
 
-        static bool is_polynom_irreducible(const std::vector<std::byte>& polynomial);
+//        static bool is_polynom_irreducible(const std::byte& polynomial);
 
-        static void print_table();
+//        static void print_table();
 
         static void print_element(const std::vector<std::byte>& el);
 
-        static std::pair<std::vector<std::byte>, std::vector<std::byte>>
-        divide(const std::vector<std::byte>& a, const std::vector<std::byte>& b);
+        static std::pair<std::byte, std::byte>
+        divide(const std::vector<std::byte>& a, const std::byte& b);
 
-        static std::map<size_t, std::vector<std::vector<std::byte>>> find_irreducible_polynomials();
+//        static std::map<size_t, std::vector<std::vector<std::byte>>> find_irreducible_polynomials();
     };
 }
