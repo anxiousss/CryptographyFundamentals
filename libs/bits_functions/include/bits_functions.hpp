@@ -31,6 +31,8 @@ namespace bits_functions {
 
     int polynomial_degree(uint16_t poly);
 
+    std::pair<uint16_t, uint16_t> divide_with_quotient(uint16_t poly1, uint16_t poly2);
+
     uint16_t bytes_to_uint16_be(const std::vector<std::byte>& bytes);
 
     std::vector<std::byte> uint16_to_bytes_be(uint16_t value);

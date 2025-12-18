@@ -8,6 +8,9 @@
 namespace number_functions {
     class NumberTheoryFunctions {
     public:
+
+        static std::vector<std::byte> cpp_int_to_bytes(const boost::multiprecision::cpp_int& num);
+
         static boost::multiprecision::cpp_int bytes_to_cpp_int(const std::vector<std::byte>& data);
 
         static boost::multiprecision::cpp_int Jacobi_symbol(const boost::multiprecision::cpp_int &a,

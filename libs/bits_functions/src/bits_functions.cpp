@@ -48,6 +48,31 @@ namespace bits_functions {
         return std::bit_width(poly) - 1;
     }
 
+    std::pair<uint16_t, uint16_t> divide_with_quotient(uint16_t poly1, uint16_t poly2) {
+        if (poly2 == 0) {
+            throw std::invalid_argument("Division by zero polynomial");
+        }
+
+        int deg1 = polynomial_degree(poly1);
+        int deg2 = polynomial_degree(poly2);
+
+        uint16_t quotient = 0;
+        uint16_t remainder = poly1;
+
+        while (deg1 >= deg2 && remainder != 0) {
+            int shift = deg1 - deg2;
+
+            quotient |= (1 << shift);
+
+            remainder ^= (poly2 << shift);
+
+            deg1 = polynomial_degree(remainder);
+        }
+
+        return {quotient, remainder};
+    }
+
+
     uint16_t bytes_to_uint16_be(const std::vector<std::byte>& data) {
         if (data.size() < sizeof(uint16_t)) {
             throw std::invalid_argument("Not enough bytes");

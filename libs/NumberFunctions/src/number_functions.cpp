@@ -22,6 +22,25 @@ namespace number_functions {
         return result;
     }
 
+    std::vector<std::byte> NumberTheoryFunctions::cpp_int_to_bytes(const boost::multiprecision::cpp_int& num) {
+        if (num < 0) {
+            throw std::invalid_argument("Negative numbers are not supported");
+        }
+        if (num == 0) {
+            return {std::byte{0}};
+        }
+
+        std::vector<unsigned char> raw_bytes;
+        boost::multiprecision::export_bits(num, std::back_inserter(raw_bytes), 8, false);
+
+        std::vector<std::byte> result;
+        result.reserve(raw_bytes.size());
+        for (unsigned char b : raw_bytes) {
+            result.push_back(static_cast<std::byte>(reverse_bits(b)));
+        }
+        return result;
+    }
+
     boost::multiprecision::cpp_int NumberTheoryFunctions::gcd(const boost::multiprecision::cpp_int &a,
                                                               const boost::multiprecision::cpp_int &b) {
         boost::multiprecision::cpp_int x = a, y = b;

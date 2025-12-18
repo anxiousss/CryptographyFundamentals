@@ -17,25 +17,16 @@ namespace galois_fields {
         std::cout << std::endl;
     }
 
-    std::vector<std::byte> GaloisField::divide(const std::vector<std::byte> &a, const std::vector<std::byte> &b) {
-        uint16_t poly1 = bits_functions::bytes_to_uint16_be(a), poly2 = bits_functions::bytes_to_uint16_be(b);
-        if (poly2 == 0) {
-            throw std::invalid_argument("Division by zero polynomial");
-        }
+    std::pair<std::vector<std::byte>, std::vector<std::byte>> GaloisField::divide(const std::vector<std::byte> &a, const std::vector<std::byte> &b) {
+        uint16_t poly1 = bits_functions::bytes_to_uint16_be(a);
+        uint16_t poly2 = bits_functions::bytes_to_uint16_be(b);
 
-        int deg1 = bits_functions::polynomial_degree(poly1);
-        int deg2 = bits_functions::polynomial_degree(poly2);
+        auto [quotient, remainder] = bits_functions::divide_with_quotient(poly1, poly2);
 
-        while (deg1 >= deg2 && poly1 != 0) {
-            int shift = deg1 - deg2;
+        std::vector<std::byte> quotient_bytes = bits_functions::uint16_to_bytes_be(quotient);
+        std::vector<std::byte> remainder_bytes = bits_functions::uint16_to_bytes_be(remainder);
 
-            poly1 ^= (poly2 << shift);
-
-            deg1 = bits_functions::polynomial_degree(poly1);
-        }
-
-        std::vector<std::byte> result = bits_functions::uint16_to_bytes_be(poly1);
-        return result;
+        return {quotient_bytes, remainder_bytes};
     }
 
     std::map<size_t, std::vector<std::vector<std::byte>>> GaloisField::find_irreducible_polynomials() {
@@ -57,7 +48,7 @@ namespace galois_fields {
                 for (size_t k = 1; k <= d / 2; ++k) {
                     auto& Q = polynominals[k];
                     for (size_t j = 0; j < Q.size(); ++j) {
-                        if (GaloisField::divide(polynominal, Q[j]) == std::vector{std::byte{0x00}, std::byte{0x00}} ) {
+                        if (GaloisField::divide(polynominal, Q[j]).second == std::vector{std::byte{0x00}, std::byte{0x00}} ) {
                             is_irreducible = false;
                             break;
                         }
@@ -91,9 +82,12 @@ namespace galois_fields {
     std::vector<std::byte>  GaloisField::multiply(const std::vector<std::byte> &a, const std::vector<std::byte> &b,
                                       const std::vector<std::byte> &mod) {
 
+        if (!GaloisField::is_polynom_irreducible(mod))
+            throw std::invalid_argument("Mod polynom is not irreducible.");
+
         std::vector<std::byte> mul(2);
         std::vector<size_t> indices(16, 0);
-            for (size_t i = 0; i < 8; ++i) {
+        for (size_t i = 0; i < 8; ++i) {
             auto a_bit = bits_functions::get_eldest_bit(a[0], i);
             for (size_t j = 0; j < 8; ++j) {
                 auto b_bit = bits_functions::get_eldest_bit(b[0], j);
@@ -105,9 +99,26 @@ namespace galois_fields {
             bits_functions::set_eldest_bit(mul[i / 8], i % 8, indices[i] % 2);
         }
 
+        return GaloisField::divide(mul, mod).second;
+    }
 
+    std::vector<std::byte>
+    GaloisField::mod_exp(const std::vector<std::byte> &base, int exp, const std::vector<std::byte> &mod) {
+        if (!GaloisField::is_polynom_irreducible(mod))
+            throw std::invalid_argument("Mod polynom is not irreducible.");
 
-        return GaloisField::divide(mul, mod);
+        std::vector<std::byte> result = {std::byte{0b10000000}, std::byte{0x00}};
+        std::vector<std::byte> b = base;
+
+        while (exp > 0) {
+            if (exp & 1) {
+                result = multiply(result, b, mod);
+            }
+            b = multiply(b, b, mod);
+            exp >>= 1;
+        }
+
+        return result;
     }
 
     std::vector<std::byte>
@@ -115,10 +126,34 @@ namespace galois_fields {
         if (a == std::vector{std::byte{0x00}, std::byte{0x00}})
             return std::vector{std::byte{0x00}, std::byte{0x00}};
 
-        auto [r, s, q] = number_functions::NumberTheoryFunctions::extended_gcd(
-                number_functions::NumberTheoryFunctions::bytes_to_cpp_int(a),
-                number_functions::NumberTheoryFunctions::bytes_to_cpp_int(mod));
+        return GaloisField::mod_exp(a, 254, mod);
+    }
 
-        return
+    bool GaloisField::is_polynom_irreducible(const std::vector<std::byte> &polynominal) {
+        std::map<size_t, std::vector<std::vector<std::byte>>> table= {{1, {{std::byte{0b01000000}, std::byte{0x00}},
+                                                                                {std::byte{0b11000000}, std::byte{0x00}}}},
+                                                                      {2, {{std::byte{0b11100000}, std::byte{0x00}}}},
+                                                                      {3, {{std::byte{0b11010000}, std::byte{0x00}},
+                                                                                 {std::byte{0b10110000}, std::byte{0x00}}}},
+                                                                      {4, {{std::byte{0b11001000}, std::byte{0x00}},
+                                                                                 {std::byte{0b10011000}, std::byte{0x00}},
+                                                                                 {std::byte{0b11111000}, std::byte{0x00}}}}};
+
+        bool is_irreducible = true;
+
+        for (size_t k = 1; k <= 4; ++k) {
+            auto& Q = table[k];
+            for (size_t j = 0; j < Q.size(); ++j) {
+                if (Q[j] == polynominal) return true;
+                if (GaloisField::divide(polynominal, Q[j]).second == std::vector{std::byte{0x00}, std::byte{0x00}} ) {
+                    is_irreducible = false;
+                    break;
+                }
+            }
+            if (!is_irreducible)
+                break;
+        }
+
+        return is_irreducible;
     }
 }
