@@ -1,3 +1,3 @@
-add_library(test_utility src/test_utility.cpp)
+add_library(test_utility SHARED src/test_utility.cpp)
 target_link_libraries(test_utility PUBLIC symmetric_context)
 target_include_directories(test_utility PUBLIC include)

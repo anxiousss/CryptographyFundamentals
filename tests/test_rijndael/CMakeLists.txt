@@ -1,0 +1,3 @@
+add_library(test_rijndael SHARED src/test_rijndael.cpp)
+target_link_libraries(test_rijndael PRIVATE test_utility rijndael)
+target_include_directories(test_rijndael PUBLIC include)

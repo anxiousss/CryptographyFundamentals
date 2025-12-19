@@ -1,3 +1,5 @@
+#pragma once
+
 #include "bits_functions.hpp"
 #include "symmetric_context.hpp"
 #include "galois_fields.hpp"
