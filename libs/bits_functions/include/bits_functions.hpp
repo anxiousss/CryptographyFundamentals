@@ -43,6 +43,8 @@ namespace bits_functions {
 
     std::vector<std::byte> uint16_to_bytes(uint16_t value);
 
+    std::byte uint16t_to_byte(uint16_t value);
+
     template<size_t TableSize>
     std::vector<std::byte>
     bits_permutation(const std::vector<std::byte>& msg,

@@ -94,24 +94,28 @@ namespace bits_functions {
     }
 
 
-    uint16_t bytes_to_uint16(const std::vector<std::byte>& data) {
+    uint16_t    bytes_to_uint16(const std::vector<std::byte>& data) {
         if (data.size() < sizeof(uint16_t)) {
             throw std::invalid_argument("Not enough bytes");
         }
         uint16_t result = 0;
-        for (size_t i = 0; i < data.size() * 8; ++i) {
-            bool bit = get_eldest_bit(data[i / 8], i % 8);
-            if (bit == 1)
-                result += std::pow(2, i);
+        int index =  data.size() * 8 - 1;
+        for (int i = index; i > -1; --i) {
+            auto bit = bits_functions::get_younger_bit(data[(index - i) / 8], i % 8);
+            result += bit * std::pow(2, i);
         }
         return result;
+    }
+
+    std::byte uint16t_to_byte(uint16_t value) {
+        return static_cast<std::byte>(value);
     }
 
     std::vector<std::byte> uint16_to_bytes(uint16_t value) {
         std::vector<std::byte> result;
 
-        result.push_back(std::byte{static_cast<uint8_t>(value & 0xFF)});
-        result.push_back(std::byte{static_cast<uint8_t>((value >> 8) & 0xFF))});
+        result.push_back(std::byte{(static_cast<uint8_t>(value & 0xFF))});
+        result.push_back(std::byte{(static_cast<uint8_t>((value >> 8) & 0xFF))});
 
         return result;
     }

@@ -1,6 +1,12 @@
 #include "rijndael.hpp"
 
 int main() {
-    std::vector<std::byte> y{std::byte{0b11100010}, std::byte{0b00100101}};
-    galois_fields::GaloisField::print_element(y);
+    std::byte mod{0x1B};
+    std::byte a{0x10};
+    galois_fields::GaloisField::print_element({std::byte{0x01}, mod});
+    galois_fields::GaloisField::print_element({a});
+    std::byte inv = galois_fields::GaloisField::multiplicative_inverse(a, mod);
+    galois_fields::GaloisField::print_element({inv});
+    galois_fields::GaloisField::print_element({galois_fields::GaloisField::multiply(a, inv, mod)});
+
 }
