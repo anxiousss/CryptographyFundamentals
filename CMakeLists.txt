@@ -8,7 +8,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem random system)
 find_package(OpenSSL REQUIRED)
 
 
-add_compile_options(-O3)
+# add_compile_options(-O3)
 
 add_subdirectory(libs/Rijndael)
 add_subdirectory(libs/GaloisFields)
@@ -37,4 +37,4 @@ target_link_libraries(lab1t1 test_utility test_des symmetric_context feistel_net
 target_link_libraries(lab1t2 test_utility test_triple_des triple_des symmetric_context feistel_network des)
 target_link_libraries(lab1t3 test_utility test_deal symmetric_context feistel_network des deal)
 target_link_libraries(lab2 test_rsa bits_functions number_functions number_functions rsa)
-target_link_libraries(lab3 symmetric_context bits_functions galois_fields rijndael)
+target_link_libraries(lab3 rijndael)

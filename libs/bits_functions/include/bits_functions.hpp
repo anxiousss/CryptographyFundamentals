@@ -21,8 +21,6 @@ namespace bits_functions {
 
     void print_byte_vector(const std::vector<std::byte>& data);
 
-    void print_le(const std::vector<std::byte>& data);
-
     void set_eldest_bit(std::byte &b, size_t n, bool value);
 
     bool get_eldest_bit(std::byte b, size_t n);
@@ -44,6 +42,12 @@ namespace bits_functions {
     std::vector<std::byte> uint16_to_bytes(uint16_t value);
 
     std::byte uint16t_to_byte(uint16_t value);
+
+    std::vector<std::byte> cyclic_left_row_shift(std::vector<std::byte>& row, size_t amount);
+
+    std::vector<std::byte> cyclic_right_row_shift(std::vector<std::byte>& row, size_t amount);
+
+    std::vector<std::byte> rotation_word(std::vector<std::byte>& word);
 
     template<size_t TableSize>
     std::vector<std::byte>

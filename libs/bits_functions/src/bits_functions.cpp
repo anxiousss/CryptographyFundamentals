@@ -11,27 +11,12 @@ namespace bits_functions {
 
     void print_byte_vector(const std::vector<std::byte>& data) {
         std::cout << "Vector size: " << data.size() << " [";
-        for (size_t i = 0; i < std::min(data.size(), size_t(10)); ++i) {
+        for (size_t i = 0; i < std::min(data.size(), size_t(100)); ++i) {
             std::cout << std::hex << static_cast<int>(data[i]) << " ";
         }
-        if (data.size() > 10) std::cout << "...";
+        if (data.size() > 100) std::cout << "...";
         std::cout << "]" << std::dec << std::endl;
     }
-
-    void print_le(const std::vector<std::byte>& data) {
-        int hex = 0;
-
-        for (int i = 0; i < data.size() * 8; ++i) {
-            auto bit = get_eldest_bit(data[i / 8], i % 8);
-            hex += bit * std::pow(2, i);
-            if (i % 8 == 7 && i != 0) {
-                std::cout << std::hex << hex << ' ';
-                hex = 0;
-            }
-        }
-        std::cout << std::endl;
-    }
-
 
     void set_eldest_bit(std::byte &b, size_t n, bool value) {
         b = (b & ~(std::byte(0x80) >> n)) | (std::byte(value ? 0x80 : 0x00) >> n);
@@ -94,7 +79,7 @@ namespace bits_functions {
     }
 
 
-    uint16_t    bytes_to_uint16(const std::vector<std::byte>& data) {
+    uint16_t bytes_to_uint16(const std::vector<std::byte>& data) {
         if (data.size() < sizeof(uint16_t)) {
             throw std::invalid_argument("Not enough bytes");
         }
@@ -125,6 +110,38 @@ namespace bits_functions {
         amount %= 8;
         uint8_t result = (value << amount) | (value >> (8 - amount));
         return static_cast<std::byte>(result);
+    }
+
+    std::vector<std::byte> cyclic_left_row_shift(std::vector<std::byte>& row, size_t amount) {
+        if (amount == 0)
+            return row;
+
+        size_t n_rows = row.size();
+        amount %= n_rows;
+        for (size_t i = 0; i < amount; ++i) {
+            row.push_back(row[0]);
+            row.erase(row.begin());
+        }
+
+        return row;
+    }
+
+    std::vector<std::byte> cyclic_right_row_shift(std::vector<std::byte>& row, size_t amount) {
+        if (amount == 0)
+            return row;
+
+        size_t n_rows = row.size();
+        amount %= n_rows;
+        for (size_t i = 0; i < amount; ++i) {
+            row.insert(row.begin(), row[row.size() - 1]);
+            row.erase(row.end());
+        }
+
+        return row;
+    }
+
+    std::vector<std::byte> rotation_word(std::vector<std::byte>& word) {
+        return cyclic_left_row_shift(word, 1);
     }
 
     std::vector<std::byte> add_number_to_bytes(const std::vector<std::byte> &data, uint64_t number) {
