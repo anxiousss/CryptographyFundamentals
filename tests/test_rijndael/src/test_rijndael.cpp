@@ -4,12 +4,138 @@
 #include <random>
 #include <cassert>
 #include <filesystem>
+#include <iomanip>
+#include <functional>
 
+// ============================================
+// Функции для работы с полиномами
+// ============================================
 
+std::vector<PolynomialConfig> get_available_polynomials() {
+    std::vector<PolynomialConfig> configs;
 
-std::byte get_aes_polynomial() {
-    return std::byte{0x1B};
+    // Сначала попробуем получить полиномы из galois_fields::polynomials[8]
+    bool use_galois_polynomials = false;
+
+    try {
+        // Проверяем, что полиномы доступны
+        if (!galois_fields::polynomials.empty() && galois_fields::polynomials.size() > 8) {
+            const auto& polys_8 = galois_fields::polynomials[8];
+
+            if (!polys_8.empty()) {
+                std::cout << "Found " << polys_8.size() << " irreducible polynomials in galois_fields::polynomials[8]" << std::endl;
+                use_galois_polynomials = true;
+
+                for (size_t i = 0; i < polys_8.size(); ++i) {
+                    PolynomialConfig config;
+                    config.polynomial = polys_8[i];
+                    config.index = i;
+
+                    // Преобразуем полином в шестнадцатеричную строку для имени
+                    std::stringstream ss;
+                    int poly_value = std::to_integer<int>(config.polynomial);
+                    ss << "0x" << std::hex << std::setw(2) << std::setfill('0') << poly_value;
+                    config.name = ss.str();
+
+                    configs.push_back(config);
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cout << "Error accessing galois_fields::polynomials: " << e.what() << std::endl;
+        use_galois_polynomials = false;
+    }
+
+    // Если не удалось получить полиномы из galois_fields или список пуст, используем стандартный набор
+    if (!use_galois_polynomials || configs.empty()) {
+        std::cout << "Using built-in list of irreducible polynomials (degree 8)" << std::endl;
+        configs.clear();  // Очищаем, если там что-то было
+
+        // Стандартные неприводимые полиномы степени 8 (для GF(2^8))
+        std::vector<std::pair<std::byte, std::string>> default_polys = {
+                {std::byte{0x1B}, "0x1B (x^8 + x^4 + x^3 + x + 1) - AES standard"},
+                {std::byte{0x1D}, "0x1D (x^8 + x^4 + x^3 + x^2 + 1)"},
+                {std::byte{0x2B}, "0x2B (x^8 + x^5 + x^3 + x + 1)"},
+                {std::byte{0x4D}, "0x4D (x^8 + x^6 + x^3 + x^2 + 1)"},
+                {std::byte{0x5F}, "0x5F (x^8 + x^6 + x^4 + x^3 + x^2 + x + 1)"},
+                {std::byte{0x63}, "0x63 (x^8 + x^6 + x^5 + x + 1)"},
+                {std::byte{0x65}, "0x65 (x^8 + x^6 + x^5 + x^2 + 1)"},
+                {std::byte{0x69}, "0x69 (x^8 + x^6 + x^5 + x^3 + 1)"},
+                {std::byte{0x71}, "0x71 (x^8 + x^6 + x^5 + x^4 + 1)"},
+                {std::byte{0x77}, "0x77 (x^8 + x^6 + x^5 + x^4 + x^2 + x + 1)"},
+                {std::byte{0x7D}, "0x7D (x^8 + x^6 + x^5 + x^4 + x^3 + x^2 + 1)"},
+                {std::byte{0x8B}, "0x8B (x^8 + x^7 + x^3 + x + 1)"},
+                {std::byte{0x8D}, "0x8D (x^8 + x^7 + x^3 + x^2 + 1)"},
+                {std::byte{0x9F}, "0x9F (x^8 + x^7 + x^4 + x^3 + x^2 + x + 1)"},
+                {std::byte{0xA3}, "0xA3 (x^8 + x^7 + x^5 + x + 1)"},
+                {std::byte{0xA9}, "0xA9 (x^8 + x^7 + x^5 + x^3 + 1)"},
+                {std::byte{0xB1}, "0xB1 (x^8 + x^7 + x^5 + x^4 + 1)"},
+                {std::byte{0xBD}, "0xBD (x^8 + x^7 + x^5 + x^4 + x^3 + x^2 + 1)"},
+                {std::byte{0xC3}, "0xC3 (x^8 + x^7 + x^6 + x + 1)"},
+                {std::byte{0xCF}, "0xCF (x^8 + x^7 + x^6 + x^3 + x^2 + x + 1)"},
+                {std::byte{0xD7}, "0xD7 (x^8 + x^7 + x^6 + x^4 + x^2 + x + 1)"},
+                {std::byte{0xDD}, "0xDD (x^8 + x^7 + x^6 + x^4 + x^3 + x^2 + 1)"},
+                {std::byte{0xE7}, "0xE7 (x^8 + x^7 + x^6 + x^5 + x^2 + x + 1)"},
+                {std::byte{0xF3}, "0xF3 (x^8 + x^7 + x^6 + x^5 + x^4 + x + 1)"},
+                {std::byte{0xF5}, "0xF5 (x^8 + x^7 + x^6 + x^5 + x^4 + x^2 + 1)"},
+                {std::byte{0xF9}, "0xF9 (x^8 + x^7 + x^6 + x^5 + x^4 + x^3 + 1)"}
+        };
+
+        for (size_t i = 0; i < default_polys.size(); ++i) {
+            PolynomialConfig config;
+            config.polynomial = default_polys[i].first;
+            config.index = i;
+            config.name = default_polys[i].second;
+            configs.push_back(config);
+        }
+    }
+
+    return configs;
 }
+
+void print_available_polynomials() {
+    auto polynomials = get_available_polynomials();
+
+    std::cout << "\n=== Available Irreducible Polynomials (degree 8) ===" << std::endl;
+    std::cout << "Index | Hex Value | Description" << std::endl;
+    std::cout << "------|-----------|---------------------------------" << std::endl;
+
+    for (size_t i = 0; i < polynomials.size(); ++i) {
+        const auto& poly = polynomials[i];
+
+        // Извлекаем hex значение из имени
+        std::string hex_value;
+        size_t start = poly.name.find("0x");
+        if (start != std::string::npos) {
+            size_t end = poly.name.find(" ", start);
+            if (end != std::string::npos) {
+                hex_value = poly.name.substr(start, end - start);
+            } else {
+                hex_value = poly.name.substr(start);
+            }
+        } else {
+            hex_value = "N/A";
+        }
+
+        std::cout << std::setw(5) << i << " | "
+                  << std::setw(9) << hex_value << " | ";
+
+        // Выводим описание
+        size_t desc_start = poly.name.find(")");
+        if (desc_start != std::string::npos) {
+            std::cout << poly.name.substr(desc_start + 2);
+        } else {
+            std::cout << poly.name;
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "\nTotal: " << polynomials.size() << " irreducible polynomials available." << std::endl;
+}
+
+// ============================================
+// Безопасные фабричные функции с полиномами
+// ============================================
 
 void safe_initialize_galois() {
     static bool initialized = false;
@@ -25,203 +151,99 @@ void safe_initialize_galois() {
     }
 }
 
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_128_128(const std::vector<std::byte>& key) {
+std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_with_polynomial(
+        const std::vector<std::byte>& key,
+        size_t block_size,
+        const PolynomialConfig& poly_config) {
+
+    safe_initialize_galois();
+    std::vector<std::byte> key_copy = key;
+
+    try {
+        return std::make_unique<rijndael::Rijndael>(key_copy, block_size, poly_config.polynomial);
+    } catch (const std::exception& e) {
+        std::cerr << "Error creating Rijndael with polynomial " << poly_config.name
+                  << ": " << e.what() << std::endl;
+        throw;
+    }
+}
+
+std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_128_with_polynomial(
+        const std::vector<std::byte>& key,
+        const PolynomialConfig& poly_config) {
+
     if (key.size() != 16) {
         throw std::invalid_argument("Key size must be 16 bytes for AES-128");
     }
 
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 16, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 128-128: " << e.what() << std::endl;
-        throw;
-    }
+    return create_rijndael_with_polynomial(key, 16, poly_config);
 }
 
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_192_128(const std::vector<std::byte>& key) {
+std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_192_with_polynomial(
+        const std::vector<std::byte>& key,
+        const PolynomialConfig& poly_config) {
+
     if (key.size() != 24) {
         throw std::invalid_argument("Key size must be 24 bytes for AES-192");
     }
 
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 16, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 192-128: " << e.what() << std::endl;
-        throw;
-    }
+    return create_rijndael_with_polynomial(key, 16, poly_config);
 }
 
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_256_128(const std::vector<std::byte>& key) {
+std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_256_with_polynomial(
+        const std::vector<std::byte>& key,
+        const PolynomialConfig& poly_config) {
+
     if (key.size() != 32) {
         throw std::invalid_argument("Key size must be 32 bytes for AES-256");
     }
 
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 16, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 256-128: " << e.what() << std::endl;
-        throw;
-    }
+    return create_rijndael_with_polynomial(key, 16, poly_config);
 }
 
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_128_192(const std::vector<std::byte>& key) {
-    if (key.size() != 16) {
-        throw std::invalid_argument("Key size must be 16 bytes for Rijndael-128-192");
-    }
-
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 24, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 128-192: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_192_192(const std::vector<std::byte>& key) {
-    if (key.size() != 24) {
-        throw std::invalid_argument("Key size must be 24 bytes for Rijndael-192-192");
-    }
-
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 24, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 192-192: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_256_192(const std::vector<std::byte>& key) {
-    if (key.size() != 32) {
-        throw std::invalid_argument("Key size must be 32 bytes for Rijndael-256-192");
-    }
-
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 24, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 256-192: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_128_256(const std::vector<std::byte>& key) {
-    if (key.size() != 16) {
-        throw std::invalid_argument("Key size must be 16 bytes for Rijndael-128-256");
-    }
-
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 32, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 128-256: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_192_256(const std::vector<std::byte>& key) {
-    if (key.size() != 24) {
-        throw std::invalid_argument("Key size must be 24 bytes for Rijndael-192-256");
-    }
-
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 32, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 192-256: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_256_256(const std::vector<std::byte>& key) {
-    if (key.size() != 32) {
-        throw std::invalid_argument("Key size must be 32 bytes for Rijndael-256-256");
-    }
-
-    safe_initialize_galois();
-    std::vector<std::byte> key_copy = key;
-
-    try {
-        return std::make_unique<rijndael::Rijndael>(key_copy, 32, get_aes_polynomial());
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating Rijndael 256-256: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_128(const std::vector<std::byte>& key) {
-    return create_rijndael_128_128(key);
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_192(const std::vector<std::byte>& key) {
-    return create_rijndael_192_128(key);
-}
-
-std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_256(const std::vector<std::byte>& key) {
-    return create_rijndael_256_128(key);
-}
-
-
+// ============================================
+// Реализация методов класса RijndaelTest
+// ============================================
 
 void RijndaelTest::initialize_galois_fields() {
     safe_initialize_galois();
 }
 
-std::filesystem::path RijndaelTest::setup_test_directory() {
-    std::filesystem::path base_dir = "test_rijndael/results";
-    std::filesystem::create_directories(base_dir);
-    return base_dir;
-}
-
-bool test_rijndael_file_operation(
-        TestRunner& runner,
+bool RijndaelTest::test_rijndael_file_with_polynomial(
         const std::string& file_type,
         const std::filesystem::path& file_path,
         const std::vector<std::byte>& key,
         const std::vector<std::byte>& iv,
-        std::unique_ptr<symmetric_context::SymmetricAlgorithm> algorithm,
-        symmetric_context::EncryptionModes encryption_mode,
-        symmetric_context::PaddingModes padding_mode,
-        const std::string& algorithm_name
-) {
+        const PolynomialConfig& poly_config,
+        const std::string& algorithm_name) {
+
     if (!std::filesystem::exists(file_path)) {
         std::cout << "File not found: " << file_path << std::endl;
         return false;
     }
 
     try {
+        auto algorithm = create_aes_128_with_polynomial(key, poly_config);
         symmetric_context::SymmetricContext cipher(
-                key, encryption_mode, padding_mode, iv, {}, std::move(algorithm)
+                key,
+                get_file_encryption_mode(),
+                get_file_padding_mode(),
+                iv, {},
+                std::move(algorithm)
         );
 
         std::string file_stem = file_path.stem().string();
         std::filesystem::path results_dir = "tests/test_rijndael/results";
         std::filesystem::create_directories(results_dir);
 
-        std::filesystem::path encrypted_path = results_dir / (file_stem + "_" + algorithm_name + "_encrypted" + file_path.extension().string());
-        std::filesystem::path decrypted_path = results_dir / (file_stem + "_" + algorithm_name + "_decrypted" + file_path.extension().string());
+        std::string poly_tag = "poly" + std::to_string(poly_config.index);
+        std::filesystem::path encrypted_path = results_dir /
+                                               (file_stem + "_" + algorithm_name + "_" + poly_tag + "_encrypted" + file_path.extension().string());
+        std::filesystem::path decrypted_path = results_dir /
+                                               (file_stem + "_" + algorithm_name + "_" + poly_tag + "_decrypted" + file_path.extension().string());
 
-        std::cout << "Testing " << file_type << " file with " << algorithm_name << ":" << std::endl;
+        std::cout << "Testing " << file_type << " file with " << algorithm_name
+                  << " (Polynomial: " << poly_config.name << "):" << std::endl;
         std::cout << "  Original: " << file_path << std::endl;
         std::cout << "  Encrypted: " << encrypted_path << std::endl;
         std::cout << "  Decrypted: " << decrypted_path << std::endl;
@@ -242,28 +264,230 @@ bool test_rijndael_file_operation(
         auto encrypted_size = std::filesystem::file_size(encrypted_path);
         auto decrypted_size = std::filesystem::file_size(decrypted_path);
 
-        print_file_metrics(file_type + " File (" + algorithm_name + ")",
+        print_file_metrics(file_type + " File (" + algorithm_name + ", Poly: " + poly_config.name + ")",
                            original_size, encrypted_size, decrypted_size,
                            encrypt_duration, decrypt_duration);
 
         bool success = compare_files(file_path, decrypted_path);
 
         if (success) {
-            std::cout << "✓ " << file_type << " file encryption/decryption successful with " << algorithm_name << std::endl;
+            std::cout << "✓ " << file_type << " file encryption/decryption successful with polynomial "
+                      << poly_config.name << std::endl;
         } else {
-            std::cout << "✗ " << file_type << " file encryption/decryption failed with " << algorithm_name << std::endl;
+            std::cout << "✗ " << file_type << " file encryption/decryption failed with polynomial "
+                      << poly_config.name << std::endl;
         }
 
         return success;
 
     } catch (const std::exception& e) {
-        std::cout << "Exception in " << file_type << " file test (" << algorithm_name << "): " << e.what() << std::endl;
+        std::cout << "Exception in " << file_type << " file test (Poly: " << poly_config.name
+                  << "): " << e.what() << std::endl;
         return false;
     }
 }
 
-void RijndaelTest::test_aes_128(const TestFileConfig& config) {
-    std::cout << "\n--- Testing AES-128 (128-bit key, 128-bit block) ---" << std::endl;
+// Вспомогательные методы для тестирования с std::function
+void RijndaelTest::test_basic_modes_with_function(
+        const std::vector<std::byte>& key,
+        const std::vector<std::byte>& iv,
+        std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algorithm,
+        const std::string& algorithm_name) {
+
+    std::vector<symmetric_context::EncryptionModes> modes = {
+            symmetric_context::EncryptionModes::ECB,
+            symmetric_context::EncryptionModes::CBC,
+            symmetric_context::EncryptionModes::PCBC,
+            symmetric_context::EncryptionModes::CFB,
+            symmetric_context::EncryptionModes::OFB,
+            symmetric_context::EncryptionModes::CTR,
+            symmetric_context::EncryptionModes::RandomDelta
+    };
+
+    std::vector<std::byte> test_data = {
+            std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+            std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+            std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC},
+            std::byte{0xDD}, std::byte{0xEE}, std::byte{0xFF}, std::byte{0x00}
+    };
+
+    bool all_passed = true;
+
+    for (auto mode : modes) {
+        std::string mode_name;
+        switch (mode) {
+            case symmetric_context::EncryptionModes::ECB: mode_name = "ECB"; break;
+            case symmetric_context::EncryptionModes::CBC: mode_name = "CBC"; break;
+            case symmetric_context::EncryptionModes::PCBC: mode_name = "PCBC"; break;
+            case symmetric_context::EncryptionModes::CFB: mode_name = "CFB"; break;
+            case symmetric_context::EncryptionModes::OFB: mode_name = "OFB"; break;
+            case symmetric_context::EncryptionModes::CTR: mode_name = "CTR"; break;
+            case symmetric_context::EncryptionModes::RandomDelta: mode_name = "RandomDelta"; break;
+        }
+
+        try {
+            auto algorithm = create_algorithm(key);
+            std::optional<std::vector<std::byte>> opt_iv = (mode != symmetric_context::EncryptionModes::ECB)
+                                                           ? std::make_optional(iv) : std::nullopt;
+
+            symmetric_context::SymmetricContext algo(key, mode, symmetric_context::PaddingModes::PKCS7,
+                                                     opt_iv, {}, std::move(algorithm));
+
+            auto encrypted = algo.encrypt(test_data).get();
+            auto decrypted = algo.decrypt(encrypted).get();
+
+            if (!compare_byte_vectors(test_data, decrypted)) {
+                std::cout << "✗ " << mode_name << " mode failed for " << algorithm_name << std::endl;
+                all_passed = false;
+            } else {
+                std::cout << "✓ " << mode_name << " mode passed for " << algorithm_name << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cout << "✗ " << mode_name << " mode exception for " << algorithm_name
+                      << ": " << e.what() << std::endl;
+            all_passed = false;
+        }
+    }
+
+    if (all_passed) {
+        std::cout << "✓ All encryption modes passed for " << algorithm_name << std::endl;
+    } else {
+        std::cout << "✗ Some encryption modes failed for " << algorithm_name << std::endl;
+    }
+}
+
+void RijndaelTest::test_padding_modes_with_function(
+        const std::vector<std::byte>& key,
+        const std::vector<std::byte>& iv,
+        std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algorithm,
+        const std::string& algorithm_name) {
+
+    std::vector<std::vector<std::byte>> test_data_sets = {
+            {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44}},
+            {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                    std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88}},
+            {std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44},
+                    std::byte{0x55}, std::byte{0x66}, std::byte{0x77}, std::byte{0x88},
+                    std::byte{0x99}, std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}}
+    };
+
+    std::vector<symmetric_context::PaddingModes> padding_modes = {
+            symmetric_context::PaddingModes::ANSIX_923,
+            symmetric_context::PaddingModes::PKCS7,
+            symmetric_context::PaddingModes::ISO_10126
+    };
+
+    bool all_passed = true;
+
+    for (auto padding_mode : padding_modes) {
+        for (const auto& test_data : test_data_sets) {
+            try {
+                auto algorithm = create_algorithm(key);
+                symmetric_context::SymmetricContext algo(key, symmetric_context::EncryptionModes::CBC, padding_mode,
+                                                         iv, {}, std::move(algorithm));
+
+                auto encrypted = algo.encrypt(test_data).get();
+                auto decrypted = algo.decrypt(encrypted).get();
+
+                if (!compare_byte_vectors(test_data, decrypted)) {
+                    all_passed = false;
+                    std::cout << "✗ Padding mode " << static_cast<int>(padding_mode)
+                              << " failed for data size " << test_data.size()
+                              << " with " << algorithm_name << std::endl;
+                } else {
+                    std::cout << "✓ Padding mode " << static_cast<int>(padding_mode)
+                              << " passed for data size " << test_data.size()
+                              << " with " << algorithm_name << std::endl;
+                }
+            } catch (const std::exception& e) {
+                all_passed = false;
+                std::cout << "✗ Padding mode " << static_cast<int>(padding_mode)
+                          << " threw exception for data size " << test_data.size()
+                          << " with " << algorithm_name
+                          << ": " << e.what() << std::endl;
+            }
+        }
+    }
+
+    if (all_passed) {
+        std::cout << "✓ All padding modes passed for " << algorithm_name << std::endl;
+    } else {
+        std::cout << "✗ Some padding modes failed for " << algorithm_name << std::endl;
+    }
+}
+
+void RijndaelTest::test_edge_cases_with_function(
+        const std::vector<std::byte>& key,
+        std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algorithm,
+        const std::string& algorithm_name) {
+
+    bool all_passed = true;
+
+    // Тест 1: Пустые данные
+    try {
+        std::vector<std::byte> empty_data;
+        auto algorithm = create_algorithm(key);
+        symmetric_context::SymmetricContext algo(key, symmetric_context::EncryptionModes::ECB,
+                                                 symmetric_context::PaddingModes::PKCS7,
+                                                 std::nullopt, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(empty_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        if (!decrypted.empty()) {
+            std::cout << "✗ Empty data test failed for " << algorithm_name << std::endl;
+            all_passed = false;
+        } else {
+            std::cout << "✓ Empty data test passed for " << algorithm_name << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cout << "✗ Empty data test exception for " << algorithm_name
+                  << ": " << e.what() << std::endl;
+        all_passed = false;
+    }
+
+    // Тест 2: Большие данные
+    try {
+        std::vector<std::byte> large_data;
+        for (int i = 0; i < 64; ++i) {
+            large_data.push_back(static_cast<std::byte>(0x20 + i));
+        }
+
+        std::vector<std::byte> iv = {
+                std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}, std::byte{0xDD},
+                std::byte{0xEE}, std::byte{0xFF}, std::byte{0x11}, std::byte{0x22}
+        };
+
+        auto algorithm = create_algorithm(key);
+        symmetric_context::SymmetricContext algo(key, symmetric_context::EncryptionModes::CBC,
+                                                 symmetric_context::PaddingModes::PKCS7,
+                                                 iv, {}, std::move(algorithm));
+
+        auto encrypted = algo.encrypt(large_data).get();
+        auto decrypted = algo.decrypt(encrypted).get();
+
+        bool data_matches = compare_byte_vectors(large_data, decrypted);
+        if (data_matches && large_data.size() == decrypted.size()) {
+            std::cout << "✓ Large data test passed for " << algorithm_name << std::endl;
+        } else {
+            std::cout << "✗ Large data test failed for " << algorithm_name << std::endl;
+            all_passed = false;
+        }
+    } catch (const std::exception& e) {
+        std::cout << "✗ Large data test exception for " << algorithm_name
+                  << ": " << e.what() << std::endl;
+        all_passed = false;
+    }
+
+    if (all_passed) {
+        std::cout << "✓ All edge cases passed for " << algorithm_name << std::endl;
+    } else {
+        std::cout << "✗ Some edge cases failed for " << algorithm_name << std::endl;
+    }
+}
+
+void RijndaelTest::test_aes_128_with_polynomial(const TestFileConfig& config, const PolynomialConfig& poly_config) {
+    std::cout << "\n--- Testing AES-128 with Polynomial " << poly_config.name << " ---" << std::endl;
 
     std::vector<std::byte> key(16);
     for (size_t i = 0; i < 16; ++i) {
@@ -275,40 +499,59 @@ void RijndaelTest::test_aes_128(const TestFileConfig& config) {
         iv[i] = static_cast<std::byte>(i + 0x10);
     }
 
-    test_basic_encryption_modes(key, iv, create_aes_128, "AES-128");
+    // Используем std::function для фабрики алгоритма
+    std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algo_func =
+            [&poly_config](const std::vector<std::byte>& k) {
+                return create_aes_128_with_polynomial(k, poly_config);
+            };
 
-    if (config.has_any_files()) {
-        std::vector<std::pair<std::string, std::filesystem::path>> test_files = {
-                {"Text", config.text_file_path},
-                {"Binary", config.binary_file_path},
-                {"Image", config.image_file_path},
-                {"PDF", config.pdf_file_path},
-                {"ZIP", config.zip_file_path},
-                {"MP4", config.mp4_file_path}
-        };
+    std::string algo_name = "AES-128-poly" + std::to_string(poly_config.index);
 
-        for (const auto& [file_type, file_path] : test_files) {
-            if (!file_path.empty() && std::filesystem::exists(file_path)) {
-                runner.start_test("AES-128 " + file_type + " File");
-                auto algorithm = create_aes_128(key);
-                bool success = test_rijndael_file_operation(
-                        runner, file_type, file_path, key, iv,
-                        std::move(algorithm), get_file_encryption_mode(),
-                        get_file_padding_mode(), "AES-128"
-                );
-                runner.assert_true(success, "AES-128 " + file_type + " file should be correctly processed");
-                runner.end_test(success);
-            }
-        }
+    // Тестируем базовые режимы шифрования
+    runner.start_test(algo_name + " Basic Encryption Modes");
+    try {
+        test_basic_modes_with_function(key, iv, create_algo_func, algo_name);
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
     }
 
+    // Тестируем режимы дополнения
+    runner.start_test(algo_name + " Padding Modes");
+    try {
+        test_padding_modes_with_function(key, iv, create_algo_func, algo_name);
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
 
-    test_padding_modes(key, iv, create_aes_128);
-    test_edge_cases(key, create_aes_128);
+    // Тестируем пограничные случаи
+    runner.start_test(algo_name + " Edge Cases");
+    try {
+        test_edge_cases_with_function(key, create_algo_func, algo_name);
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
+    }
+
+    // Тестируем файлы, если они есть
+    if (config.has_any_files()) {
+        if (!config.text_file_path.empty() && std::filesystem::exists(config.text_file_path)) {
+            runner.start_test(algo_name + " Text File");
+            bool success = test_rijndael_file_with_polynomial(
+                    "Text", config.text_file_path, key, iv, poly_config, "AES-128"
+            );
+            runner.assert_true(success, algo_name + " text file should be correctly processed");
+            runner.end_test(success);
+        }
+    }
 }
 
-void RijndaelTest::test_aes_192(const TestFileConfig& config) {
-    std::cout << "\n--- Testing AES-192 (192-bit key, 128-bit block) ---" << std::endl;
+void RijndaelTest::test_aes_192_with_polynomial(const TestFileConfig& config, const PolynomialConfig& poly_config) {
+    std::cout << "\n--- Testing AES-192 with Polynomial " << poly_config.name << " ---" << std::endl;
 
     std::vector<std::byte> key(24);
     for (size_t i = 0; i < 24; ++i) {
@@ -320,28 +563,27 @@ void RijndaelTest::test_aes_192(const TestFileConfig& config) {
         iv[i] = static_cast<std::byte>(i + 0x30);
     }
 
-    test_basic_encryption_modes(key, iv, create_aes_192, "AES-192");
+    // Используем std::function для фабрики алгоритма
+    std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algo_func =
+            [&poly_config](const std::vector<std::byte>& k) {
+                return create_aes_192_with_polynomial(k, poly_config);
+            };
 
-    if (config.has_any_files()) {
-        if (!config.text_file_path.empty() && std::filesystem::exists(config.text_file_path)) {
-            runner.start_test("AES-192 Text File");
-            auto algorithm = create_aes_192(key);
-            bool success = test_rijndael_file_operation(
-                    runner, "Text", config.text_file_path, key, iv,
-                    std::move(algorithm), get_file_encryption_mode(),
-                    get_file_padding_mode(), "AES-192"
-            );
-            runner.assert_true(success, "AES-192 text file should be correctly processed");
-            runner.end_test(success);
-        }
+    std::string algo_name = "AES-192-poly" + std::to_string(poly_config.index);
+
+    // Тестируем базовые режимы шифрования
+    runner.start_test(algo_name + " Basic Encryption Modes");
+    try {
+        test_basic_modes_with_function(key, iv, create_algo_func, algo_name);
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
     }
-
-    test_padding_modes(key, iv, create_aes_192);
-    test_edge_cases(key, create_aes_192);
 }
 
-void RijndaelTest::test_aes_256(const TestFileConfig& config) {
-    std::cout << "\n--- Testing AES-256 (256-bit key, 128-bit block) ---" << std::endl;
+void RijndaelTest::test_aes_256_with_polynomial(const TestFileConfig& config, const PolynomialConfig& poly_config) {
+    std::cout << "\n--- Testing AES-256 with Polynomial " << poly_config.name << " ---" << std::endl;
 
     std::vector<std::byte> key(32);
     for (size_t i = 0; i < 32; ++i) {
@@ -353,98 +595,103 @@ void RijndaelTest::test_aes_256(const TestFileConfig& config) {
         iv[i] = static_cast<std::byte>(i + 0x50);
     }
 
-    test_basic_encryption_modes(key, iv, create_aes_256, "AES-256");
+    // Используем std::function для фабрики алгоритма
+    std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algo_func =
+            [&poly_config](const std::vector<std::byte>& k) {
+                return create_aes_256_with_polynomial(k, poly_config);
+            };
 
-    if (config.has_any_files()) {
-        if (!config.text_file_path.empty() && std::filesystem::exists(config.text_file_path)) {
-            runner.start_test("AES-256 Text File");
-            auto algorithm = create_aes_256(key);
-            bool success = test_rijndael_file_operation(
-                    runner, "Text", config.text_file_path, key, iv,
-                    std::move(algorithm), get_file_encryption_mode(),
-                    get_file_padding_mode(), "AES-256"
-            );
-            runner.assert_true(success, "AES-256 text file should be correctly processed");
-            runner.end_test(success);
-        }
-    }
+    std::string algo_name = "AES-256-poly" + std::to_string(poly_config.index);
 
-    test_padding_modes(key, iv, create_aes_256);
-    test_edge_cases(key, create_aes_256);
-}
-
-void RijndaelTest::test_rijndael_192_block(const TestFileConfig& config) {
-    std::cout << "\n--- Testing Rijndael with 192-bit block ---" << std::endl;
-
-    std::vector<std::byte> key(16);
-    for (size_t i = 0; i < 16; ++i) {
-        key[i] = static_cast<std::byte>(i + 0x60);
-    }
-
-    std::vector<std::byte> iv(24);
-    for (size_t i = 0; i < 24; ++i) {
-        iv[i] = static_cast<std::byte>(i + 0x70);
-    }
-
-    test_basic_encryption_modes(key, iv, create_rijndael_128_192, "Rijndael-192-block");
-
-    if (config.has_any_files()) {
-        if (!config.text_file_path.empty() && std::filesystem::exists(config.text_file_path)) {
-            runner.start_test("Rijndael-192-block Text File");
-            auto algorithm = create_rijndael_128_192(key);
-            bool success = test_rijndael_file_operation(
-                    runner, "Text", config.text_file_path, key, iv,
-                    std::move(algorithm), get_file_encryption_mode(),
-                    get_file_padding_mode(), "Rijndael-192"
-            );
-            runner.assert_true(success, "Rijndael 192-bit block text file should be correctly processed");
-            runner.end_test(success);
-        }
+    // Тестируем базовые режимы шифрования
+    runner.start_test(algo_name + " Basic Encryption Modes");
+    try {
+        test_basic_modes_with_function(key, iv, create_algo_func, algo_name);
+        runner.end_test(true);
+    } catch (const std::exception& e) {
+        std::cout << "Exception: " << e.what() << std::endl;
+        runner.end_test(false);
     }
 }
 
-void RijndaelTest::test_rijndael_256_block(const TestFileConfig& config) {
-    std::cout << "\n--- Testing Rijndael with 256-bit block ---" << std::endl;
+void RijndaelTest::test_with_different_polynomials(const TestFileConfig& config) {
+    std::cout << "\n=== TESTING WITH DIFFERENT IRREDUCIBLE POLYNOMIALS ===" << std::endl;
 
-    std::vector<std::byte> key(16);
-    for (size_t i = 0; i < 16; ++i) {
-        key[i] = static_cast<std::byte>(i + 0x80);
+    auto polynomials = get_available_polynomials();
+
+    if (polynomials.empty()) {
+        std::cout << "No irreducible polynomials available!" << std::endl;
+        return;
     }
 
-    std::vector<std::byte> iv(32);
-    for (size_t i = 0; i < 32; ++i) {
-        iv[i] = static_cast<std::byte>(i + 0x90);
-    }
+    std::cout << "Found " << polynomials.size() << " irreducible polynomial(s) for testing." << std::endl;
 
-    test_basic_encryption_modes(key, iv, create_rijndael_128_256, "Rijndael-256-block");
+    // Тестируем каждый полином
+    for (size_t i = 0; i < polynomials.size(); ++i) {
+        const auto& poly = polynomials[i];
 
-    if (config.has_any_files()) {
-        if (!config.text_file_path.empty() && std::filesystem::exists(config.text_file_path)) {
-            runner.start_test("Rijndael-256-block Text File");
-            auto algorithm = create_rijndael_128_256(key);
-            bool success = test_rijndael_file_operation(
-                    runner, "Text", config.text_file_path, key, iv,
-                    std::move(algorithm), get_file_encryption_mode(),
-                    get_file_padding_mode(), "Rijndael-256"
-            );
-            runner.assert_true(success, "Rijndael 256-bit block text file should be correctly processed");
-            runner.end_test(success);
+        std::cout << "\n--- Testing with Polynomial #" << i << ": " << poly.name << " ---" << std::endl;
+
+        // Базовый тест с текущим полиномом
+        runner.start_test("Basic Test with Polynomial " + poly.name);
+        try {
+            std::vector<std::byte> test_key(16, std::byte{0x01});
+            std::vector<std::byte> test_iv(16, std::byte{0x02});
+
+            auto algorithm = create_aes_128_with_polynomial(test_key, poly);
+            symmetric_context::SymmetricContext ctx(test_key,
+                                                    symmetric_context::EncryptionModes::CBC,
+                                                    symmetric_context::PaddingModes::PKCS7,
+                                                    test_iv, {}, std::move(algorithm));
+
+            std::vector<std::byte> test_data = {std::byte{0x01}, std::byte{0x02},
+                                                std::byte{0x03}, std::byte{0x04}};
+
+            auto encrypted = ctx.encrypt(test_data).get();
+            auto decrypted = ctx.decrypt(encrypted).get();
+
+            runner.assert_true(compare_byte_vectors(test_data, decrypted),
+                               "Encryption/decryption should work with polynomial " + poly.name);
+            runner.end_test(true);
+        } catch (const std::exception& e) {
+            std::cout << "Exception with polynomial " << poly.name << ": " << e.what() << std::endl;
+            runner.end_test(false);
+        }
+
+        // Расширенное тестирование для каждого полинома
+        test_aes_128_with_polynomial(config, poly);
+
+        // Если полиномов немного, можно протестировать и другие размеры ключей
+        if (polynomials.size() <= 3) {
+            test_aes_192_with_polynomial(config, poly);
+            test_aes_256_with_polynomial(config, poly);
         }
     }
 }
 
 void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
     std::cout << "\n=== RUNNING RIJNDAEL (AES) TESTS ===" << std::endl;
-    std::cout << "Results will be saved in: test_rijndael/results/" << std::endl;
+    std::cout << "Results will be saved in: tests/test_rijndael/results/" << std::endl;
 
     std::filesystem::create_directories("tests/test_rijndael/results");
 
     initialize_galois_fields();
 
-    runner.start_test("Basic Rijndael Algorithm Creation");
+    // Показываем доступные полиномы
+    print_available_polynomials();
+
+    // Базовый тест с полиномом по умолчанию (AES)
+    runner.start_test("Basic Rijndael Algorithm Creation (Default Polynomial)");
     try {
         std::vector<std::byte> test_key(16, std::byte{0x01});
-        auto algo = create_aes_128(test_key);
+
+        // Используем полином по умолчанию для AES
+        PolynomialConfig default_poly;
+        default_poly.polynomial = std::byte{0x1B};
+        default_poly.index = 0;
+        default_poly.name = "0x1B (AES default)";
+
+        auto algo = create_aes_128_with_polynomial(test_key, default_poly);
 
         std::vector<std::byte> test_block(16, std::byte{0x00});
         auto encrypted = algo->encrypt(test_block);
@@ -466,17 +713,11 @@ void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
         return;
     }
 
-    test_aes_128(config);
-//    test_aes_192(config);
-//    test_aes_256(config);
-//
-//    // Тесты с нестандартными размерами блоков
-//    if (config.has_any_files()) {
-//        test_rijndael_192_block(config);
-//        test_rijndael_256_block(config);
-//    }
+    // Тестирование с разными полиномами
+    test_with_different_polynomials(config);
 
-    runner.start_test("Random Key/IV Test");
+    // Тест со случайными ключами и полиномом по умолчанию
+    runner.start_test("Random Key/IV Test (Default Polynomial)");
     try {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -491,7 +732,12 @@ void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
         std::vector<std::byte> test_data(64);
         for (auto& b : test_data) b = static_cast<std::byte>(dis(gen));
 
-        auto algo = create_aes_128(random_key);
+        PolynomialConfig default_poly;
+        default_poly.polynomial = std::byte{0x1B};
+        default_poly.index = 0;
+        default_poly.name = "0x1B";
+
+        auto algo = create_aes_128_with_polynomial(random_key, default_poly);
         symmetric_context::SymmetricContext ctx(random_key,
                                                 symmetric_context::EncryptionModes::CBC,
                                                 symmetric_context::PaddingModes::PKCS7,
@@ -509,7 +755,9 @@ void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
     }
 }
 
-
+// ============================================
+// Функции для запуска тестов
+// ============================================
 
 void run_all_rijndael_tests_with_custom_files(
         const std::filesystem::path& text_file,
@@ -548,10 +796,144 @@ void run_all_rijndael_tests_with_custom_files(
 
     std::cout << "\n=== RIJNDAEL TESTS COMPLETED ===" << std::endl;
     std::cout << "Total time: " << duration.count() << " ms" << std::endl;
-    std::cout << "Results saved in: test_rijndael/results/" << std::endl;
+    std::cout << "Results saved in: tests/test_rijndael/results/" << std::endl;
 
     runner.print_summary();
 }
+
+void run_rijndael_tests_with_polynomial_selection(
+        const std::filesystem::path& text_file,
+        const std::filesystem::path& binary_file,
+        const std::filesystem::path& image_file,
+        const std::filesystem::path& pdf_file,
+        const std::filesystem::path& zip_file,
+        const std::filesystem::path& mp4_file) {
+
+    std::cout << "=== RIJNDAEL/AES TEST SUITE WITH POLYNOMIAL SELECTION ===" << std::endl;
+    std::cout << "=========================================================" << std::endl;
+
+    // Показываем доступные полиномы
+    print_available_polynomials();
+
+    // Получаем полиномы
+    auto polynomials = get_available_polynomials();
+
+    if (polynomials.empty()) {
+        std::cout << "No irreducible polynomials available. Running default tests." << std::endl;
+        run_all_rijndael_tests_with_custom_files(text_file, binary_file, image_file,
+                                                 pdf_file, zip_file, mp4_file);
+        return;
+    }
+
+    // Запрашиваем у пользователя выбор полинома
+    std::cout << "\n=== Polynomial Selection Menu ===" << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  'all'     - Test all " << polynomials.size() << " polynomials" << std::endl;
+    std::cout << "  'default' - Test only AES polynomial (0x1B)" << std::endl;
+    std::cout << "  0-" << (polynomials.size() - 1) << "      - Test specific polynomial by index" << std::endl;
+    std::cout << "  'list'    - Show polynomial list again" << std::endl;
+    std::cout << "  'exit'    - Exit test" << std::endl;
+
+    std::string choice;
+    bool exit_program = false;
+
+    while (!exit_program) {
+        std::cout << "\nEnter your choice: ";
+        std::cin >> choice;
+
+        if (choice == "exit") {
+            std::cout << "Exiting polynomial selection." << std::endl;
+            return;
+        } else if (choice == "list") {
+            print_available_polynomials();
+            continue;
+        }
+
+        TestFileConfig config;
+        config.set_custom_files(text_file, binary_file, image_file, pdf_file, zip_file, mp4_file);
+
+        TestRunner runner;
+        RijndaelTest rijndael_test(runner);
+
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        try {
+            if (choice == "all") {
+                // Тестируем все полиномы
+                std::cout << "\nTesting ALL " << polynomials.size() << " irreducible polynomials..." << std::endl;
+
+                int tested_count = 0;
+                for (const auto& poly : polynomials) {
+                    std::cout << "\n=== Testing Polynomial #" << poly.index << ": " << poly.name << " ===" << std::endl;
+                    rijndael_test.test_aes_128_with_polynomial(config, poly);
+                    tested_count++;
+
+                    // Можно сделать паузу между тестами для больших наборов
+                    if (polynomials.size() > 10 && tested_count % 5 == 0) {
+                        std::cout << "\nProgress: " << tested_count << "/" << polynomials.size()
+                                  << " polynomials tested." << std::endl;
+                    }
+                }
+                std::cout << "\nCompleted testing all " << tested_count << " polynomials." << std::endl;
+            } else if (choice == "default") {
+                // Тестируем только полином по умолчанию (AES)
+                // Находим полином 0x1B в списке
+                PolynomialConfig default_poly;
+                bool found_default = false;
+
+                for (const auto& poly : polynomials) {
+                    if (poly.name.find("0x1B") != std::string::npos) {
+                        default_poly = poly;
+                        found_default = true;
+                        break;
+                    }
+                }
+
+                if (!found_default) {
+                    // Если не нашли, используем первый
+                    default_poly = polynomials[0];
+                }
+
+                std::cout << "\nTesting with default AES polynomial: " << default_poly.name << std::endl;
+                rijndael_test.test_aes_128_with_polynomial(config, default_poly);
+            } else {
+                // Пытаемся преобразовать в индекс
+                try {
+                    size_t index = std::stoul(choice);
+                    if (index < polynomials.size()) {
+                        std::cout << "\nTesting with polynomial #" << index << ": "
+                                  << polynomials[index].name << std::endl;
+                        rijndael_test.test_aes_128_with_polynomial(config, polynomials[index]);
+                    } else {
+                        std::cout << "Invalid index. Must be between 0 and " << (polynomials.size() - 1) << std::endl;
+                    }
+                } catch (...) {
+                    std::cout << "Invalid choice. Please enter a number, 'all', 'default', 'list', or 'exit'." << std::endl;
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "\nFatal error in Rijndael tests: " << e.what() << std::endl;
+        }
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
+        std::cout << "\n=== RIJNDAEL TESTS COMPLETED ===" << std::endl;
+        std::cout << "Total time: " << duration.count() << " ms" << std::endl;
+
+        runner.print_summary();
+
+        // Спрашиваем, хочет ли пользователь продолжить
+        std::cout << "\nDo you want to test another polynomial? (yes/no): ";
+        std::string continue_choice;
+        std::cin >> continue_choice;
+
+        if (continue_choice != "yes" && continue_choice != "y") {
+            exit_program = true;
+        }
+    }
+}
+
 
 void run_basic_rijndael_tests() {
     std::cout << "=== BASIC RIJNDAEL/AES TESTS (NO FILES) ===" << std::endl;
