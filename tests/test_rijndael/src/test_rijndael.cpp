@@ -6,88 +6,78 @@
 #include <filesystem>
 #include <iomanip>
 #include <functional>
+#include <bitset>
 
-// ============================================
-// Функции для работы с полиномами
-// ============================================
+std::string polynomial_to_string(std::byte poly) {
+    std::stringstream ss;
+    uint8_t poly_value = std::to_integer<uint8_t>(poly);
+    ss << "0x" << std::hex << std::setw(2) << std::setfill('0')
+       << std::uppercase << (int)poly_value;
+
+    std::bitset<8> bits(poly_value);
+
+    std::string poly_str = ss.str() + " (x^8";
+
+    for (int i = 7; i >= 0; i--) {
+        if (bits[i]) {
+            if (i == 1) {
+                poly_str += " + x";
+            } else if (i == 0) {
+                poly_str += " + 1";
+            } else {
+                poly_str += " + x^" + std::to_string(i);
+            }
+        }
+    }
+    poly_str += ")";
+
+    return poly_str;
+}
+
 
 std::vector<PolynomialConfig> get_available_polynomials() {
     std::vector<PolynomialConfig> configs;
 
-    // Сначала попробуем получить полиномы из galois_fields::polynomials[8]
-    bool use_galois_polynomials = false;
-
     try {
-        // Проверяем, что полиномы доступны
-        if (!galois_fields::polynomials.empty() && galois_fields::polynomials.size() > 8) {
-            const auto& polys_8 = galois_fields::polynomials[8];
-
-            if (!polys_8.empty()) {
-                std::cout << "Found " << polys_8.size() << " irreducible polynomials in galois_fields::polynomials[8]" << std::endl;
-                use_galois_polynomials = true;
-
-                for (size_t i = 0; i < polys_8.size(); ++i) {
-                    PolynomialConfig config;
-                    config.polynomial = polys_8[i];
-                    config.index = i;
-
-                    // Преобразуем полином в шестнадцатеричную строку для имени
-                    std::stringstream ss;
-                    int poly_value = std::to_integer<int>(config.polynomial);
-                    ss << "0x" << std::hex << std::setw(2) << std::setfill('0') << poly_value;
-                    config.name = ss.str();
-
-                    configs.push_back(config);
-                }
-            }
+        if (galois_fields::polynomials[8].empty()) {
+            galois_fields::GaloisField::find_irreducible_polynomials();
         }
-    } catch (const std::exception& e) {
-        std::cout << "Error accessing galois_fields::polynomials: " << e.what() << std::endl;
-        use_galois_polynomials = false;
-    }
 
-    // Если не удалось получить полиномы из galois_fields или список пуст, используем стандартный набор
-    if (!use_galois_polynomials || configs.empty()) {
-        std::cout << "Using built-in list of irreducible polynomials (degree 8)" << std::endl;
-        configs.clear();  // Очищаем, если там что-то было
+        const auto& polys_8 = galois_fields::polynomials[8];
 
-        // Стандартные неприводимые полиномы степени 8 (для GF(2^8))
-        std::vector<std::pair<std::byte, std::string>> default_polys = {
-                {std::byte{0x1B}, "0x1B (x^8 + x^4 + x^3 + x + 1) - AES standard"},
-                {std::byte{0x1D}, "0x1D (x^8 + x^4 + x^3 + x^2 + 1)"},
-                {std::byte{0x2B}, "0x2B (x^8 + x^5 + x^3 + x + 1)"},
-                {std::byte{0x4D}, "0x4D (x^8 + x^6 + x^3 + x^2 + 1)"},
-                {std::byte{0x5F}, "0x5F (x^8 + x^6 + x^4 + x^3 + x^2 + x + 1)"},
-                {std::byte{0x63}, "0x63 (x^8 + x^6 + x^5 + x + 1)"},
-                {std::byte{0x65}, "0x65 (x^8 + x^6 + x^5 + x^2 + 1)"},
-                {std::byte{0x69}, "0x69 (x^8 + x^6 + x^5 + x^3 + 1)"},
-                {std::byte{0x71}, "0x71 (x^8 + x^6 + x^5 + x^4 + 1)"},
-                {std::byte{0x77}, "0x77 (x^8 + x^6 + x^5 + x^4 + x^2 + x + 1)"},
-                {std::byte{0x7D}, "0x7D (x^8 + x^6 + x^5 + x^4 + x^3 + x^2 + 1)"},
-                {std::byte{0x8B}, "0x8B (x^8 + x^7 + x^3 + x + 1)"},
-                {std::byte{0x8D}, "0x8D (x^8 + x^7 + x^3 + x^2 + 1)"},
-                {std::byte{0x9F}, "0x9F (x^8 + x^7 + x^4 + x^3 + x^2 + x + 1)"},
-                {std::byte{0xA3}, "0xA3 (x^8 + x^7 + x^5 + x + 1)"},
-                {std::byte{0xA9}, "0xA9 (x^8 + x^7 + x^5 + x^3 + 1)"},
-                {std::byte{0xB1}, "0xB1 (x^8 + x^7 + x^5 + x^4 + 1)"},
-                {std::byte{0xBD}, "0xBD (x^8 + x^7 + x^5 + x^4 + x^3 + x^2 + 1)"},
-                {std::byte{0xC3}, "0xC3 (x^8 + x^7 + x^6 + x + 1)"},
-                {std::byte{0xCF}, "0xCF (x^8 + x^7 + x^6 + x^3 + x^2 + x + 1)"},
-                {std::byte{0xD7}, "0xD7 (x^8 + x^7 + x^6 + x^4 + x^2 + x + 1)"},
-                {std::byte{0xDD}, "0xDD (x^8 + x^7 + x^6 + x^4 + x^3 + x^2 + 1)"},
-                {std::byte{0xE7}, "0xE7 (x^8 + x^7 + x^6 + x^5 + x^2 + x + 1)"},
-                {std::byte{0xF3}, "0xF3 (x^8 + x^7 + x^6 + x^5 + x^4 + x + 1)"},
-                {std::byte{0xF5}, "0xF5 (x^8 + x^7 + x^6 + x^5 + x^4 + x^2 + 1)"},
-                {std::byte{0xF9}, "0xF9 (x^8 + x^7 + x^6 + x^5 + x^4 + x^3 + 1)"}
-        };
+        if (polys_8.empty()) {
+            std::cout << "Warning: No irreducible polynomials found for degree 8. "
+                      << "Using default AES polynomial." << std::endl;
 
-        for (size_t i = 0; i < default_polys.size(); ++i) {
+            PolynomialConfig default_poly;
+            default_poly.polynomial = std::byte{0x1B};
+            default_poly.index = 0;
+            default_poly.name = polynomial_to_string(default_poly.polynomial);
+            configs.push_back(default_poly);
+
+            return configs;
+        }
+
+        std::cout << "Found " << polys_8.size()
+                  << " irreducible polynomials of degree 8 from Galois fields" << std::endl;
+
+        for (size_t i = 0; i < polys_8.size(); ++i) {
             PolynomialConfig config;
-            config.polynomial = default_polys[i].first;
+            config.polynomial = polys_8[i];
             config.index = i;
-            config.name = default_polys[i].second;
+            config.name = polynomial_to_string(config.polynomial);
+
             configs.push_back(config);
         }
+    } catch (const std::exception& e) {
+        std::cout << "Error getting irreducible polynomials from Galois fields: "
+                  << e.what() << std::endl;
+
+        PolynomialConfig default_poly;
+        default_poly.polynomial = std::byte{0x1B};
+        default_poly.index = 0;
+        default_poly.name = polynomial_to_string(default_poly.polynomial);
+        configs.push_back(default_poly);
     }
 
     return configs;
@@ -97,13 +87,13 @@ void print_available_polynomials() {
     auto polynomials = get_available_polynomials();
 
     std::cout << "\n=== Available Irreducible Polynomials (degree 8) ===" << std::endl;
-    std::cout << "Index | Hex Value | Description" << std::endl;
-    std::cout << "------|-----------|---------------------------------" << std::endl;
+    std::cout << "Generated by Galois fields module" << std::endl;
+    std::cout << "Index | Hex Value | Polynomial Representation" << std::endl;
+    std::cout << "------|-----------|---------------------------" << std::endl;
 
     for (size_t i = 0; i < polynomials.size(); ++i) {
         const auto& poly = polynomials[i];
 
-        // Извлекаем hex значение из имени
         std::string hex_value;
         size_t start = poly.name.find("0x");
         if (start != std::string::npos) {
@@ -120,32 +110,61 @@ void print_available_polynomials() {
         std::cout << std::setw(5) << i << " | "
                   << std::setw(9) << hex_value << " | ";
 
-        // Выводим описание
-        size_t desc_start = poly.name.find(")");
-        if (desc_start != std::string::npos) {
-            std::cout << poly.name.substr(desc_start + 2);
+        size_t poly_start = poly.name.find("(");
+        if (poly_start != std::string::npos) {
+            std::cout << poly.name.substr(poly_start);
         } else {
             std::cout << poly.name;
         }
         std::cout << std::endl;
     }
 
-    std::cout << "\nTotal: " << polynomials.size() << " irreducible polynomials available." << std::endl;
-}
+    std::cout << "\nTotal: " << polynomials.size()
+              << " irreducible polynomials available from Galois fields." << std::endl;
 
-// ============================================
-// Безопасные фабричные функции с полиномами
-// ============================================
+    std::cout << "\nVerifying polynomial irreducibility..." << std::endl;
+    int verified_count = 0;
+    for (const auto& poly : polynomials) {
+        try {
+            bool is_irreducible = galois_fields::GaloisField::is_polynom_irreducible(poly.polynomial);
+            if (is_irreducible) {
+                verified_count++;
+                std::cout << "  ✓ " << poly.name << std::endl;
+            } else {
+                std::cout << "  ✗ " << poly.name << " is NOT irreducible (should not happen!)" << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cout << "  ? " << poly.name << " verification failed: " << e.what() << std::endl;
+        }
+    }
+
+    if (verified_count == polynomials.size()) {
+        std::cout << "\nAll " << verified_count
+                  << " polynomials verified as irreducible." << std::endl;
+    } else {
+        std::cout << "\nWarning: Only " << verified_count << " out of "
+                  << polynomials.size() << " polynomials verified as irreducible." << std::endl;
+    }
+}
 
 void safe_initialize_galois() {
     static bool initialized = false;
     if (!initialized) {
         try {
-            std::byte a{0x01};
-            std::byte b{0x02};
-            auto result = galois_fields::GaloisField::add(a, b);
+            galois_fields::GaloisField::find_irreducible_polynomials();
+
+            if (galois_fields::polynomials.find(8) == galois_fields::polynomials.end() ||
+                galois_fields::polynomials[8].empty()) {
+                std::cout << "Warning: No irreducible polynomials of degree 8 found during initialization." << std::endl;
+            } else {
+                std::cout << "Galois fields initialized successfully. Found "
+                          << galois_fields::polynomials[8].size()
+                          << " irreducible polynomials of degree 8." << std::endl;
+            }
+
             initialized = true;
-        } catch (...) {
+        } catch (const std::exception& e) {
+            std::cout << "Error initializing Galois fields: " << e.what() << std::endl;
             initialized = true;
         }
     }
@@ -160,6 +179,12 @@ std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_with_poly
     std::vector<std::byte> key_copy = key;
 
     try {
+        bool is_irreducible = galois_fields::GaloisField::is_polynom_irreducible(poly_config.polynomial);
+        if (!is_irreducible) {
+            throw std::invalid_argument("Polynomial " + poly_config.name + " is not irreducible");
+        }
+
+        std::cout << "Creating Rijndael with polynomial: " << poly_config.name << std::endl;
         return std::make_unique<rijndael::Rijndael>(key_copy, block_size, poly_config.polynomial);
     } catch (const std::exception& e) {
         std::cerr << "Error creating Rijndael with polynomial " << poly_config.name
@@ -201,10 +226,6 @@ std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_256_with_polyn
     return create_rijndael_with_polynomial(key, 16, poly_config);
 }
 
-// ============================================
-// Реализация методов класса RijndaelTest
-// ============================================
-
 void RijndaelTest::initialize_galois_fields() {
     safe_initialize_galois();
 }
@@ -236,7 +257,20 @@ bool RijndaelTest::test_rijndael_file_with_polynomial(
         std::filesystem::path results_dir = "tests/test_rijndael/results";
         std::filesystem::create_directories(results_dir);
 
-        std::string poly_tag = "poly" + std::to_string(poly_config.index);
+        std::string hex_value;
+        size_t start = poly_config.name.find("0x");
+        if (start != std::string::npos) {
+            size_t end = poly_config.name.find(" ", start);
+            if (end != std::string::npos) {
+                hex_value = poly_config.name.substr(start + 2, end - start - 2);
+            } else {
+                hex_value = poly_config.name.substr(start + 2);
+            }
+        } else {
+            hex_value = std::to_string(poly_config.index);
+        }
+
+        std::string poly_tag = "poly_" + hex_value;
         std::filesystem::path encrypted_path = results_dir /
                                                (file_stem + "_" + algorithm_name + "_" + poly_tag + "_encrypted" + file_path.extension().string());
         std::filesystem::path decrypted_path = results_dir /
@@ -287,7 +321,6 @@ bool RijndaelTest::test_rijndael_file_with_polynomial(
     }
 }
 
-// Вспомогательные методы для тестирования с std::function
 void RijndaelTest::test_basic_modes_with_function(
         const std::vector<std::byte>& key,
         const std::vector<std::byte>& iv,
@@ -423,7 +456,6 @@ void RijndaelTest::test_edge_cases_with_function(
 
     bool all_passed = true;
 
-    // Тест 1: Пустые данные
     try {
         std::vector<std::byte> empty_data;
         auto algorithm = create_algorithm(key);
@@ -446,7 +478,6 @@ void RijndaelTest::test_edge_cases_with_function(
         all_passed = false;
     }
 
-    // Тест 2: Большие данные
     try {
         std::vector<std::byte> large_data;
         for (int i = 0; i < 64; ++i) {
@@ -499,7 +530,6 @@ void RijndaelTest::test_aes_128_with_polynomial(const TestFileConfig& config, co
         iv[i] = static_cast<std::byte>(i + 0x10);
     }
 
-    // Используем std::function для фабрики алгоритма
     std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algo_func =
             [&poly_config](const std::vector<std::byte>& k) {
                 return create_aes_128_with_polynomial(k, poly_config);
@@ -507,7 +537,6 @@ void RijndaelTest::test_aes_128_with_polynomial(const TestFileConfig& config, co
 
     std::string algo_name = "AES-128-poly" + std::to_string(poly_config.index);
 
-    // Тестируем базовые режимы шифрования
     runner.start_test(algo_name + " Basic Encryption Modes");
     try {
         test_basic_modes_with_function(key, iv, create_algo_func, algo_name);
@@ -517,7 +546,6 @@ void RijndaelTest::test_aes_128_with_polynomial(const TestFileConfig& config, co
         runner.end_test(false);
     }
 
-    // Тестируем режимы дополнения
     runner.start_test(algo_name + " Padding Modes");
     try {
         test_padding_modes_with_function(key, iv, create_algo_func, algo_name);
@@ -527,7 +555,6 @@ void RijndaelTest::test_aes_128_with_polynomial(const TestFileConfig& config, co
         runner.end_test(false);
     }
 
-    // Тестируем пограничные случаи
     runner.start_test(algo_name + " Edge Cases");
     try {
         test_edge_cases_with_function(key, create_algo_func, algo_name);
@@ -537,16 +564,35 @@ void RijndaelTest::test_aes_128_with_polynomial(const TestFileConfig& config, co
         runner.end_test(false);
     }
 
-    // Тестируем файлы, если они есть
-    if (config.has_any_files()) {
-        if (!config.text_file_path.empty() && std::filesystem::exists(config.text_file_path)) {
-            runner.start_test(algo_name + " Text File");
+    bool any_file_tested = false;
+
+    auto test_file_if_exists = [&](const std::string& file_type,
+                                   const std::filesystem::path& file_path) -> bool {
+        if (!file_path.empty() && std::filesystem::exists(file_path)) {
+            runner.start_test(algo_name + " " + file_type + " File");
             bool success = test_rijndael_file_with_polynomial(
-                    "Text", config.text_file_path, key, iv, poly_config, "AES-128"
+                    file_type, file_path, key, iv, poly_config, "AES-128"
             );
-            runner.assert_true(success, algo_name + " text file should be correctly processed");
+            runner.assert_true(success, algo_name + " " + file_type + " file should be correctly processed");
             runner.end_test(success);
+            any_file_tested = true;
+            return success;
+        } else if (!file_path.empty()) {
+            std::cout << "Note: " << file_type << " file not found: " << file_path << std::endl;
         }
+        return false;
+    };
+
+    std::cout << "\n--- File Tests ---" << std::endl;
+    test_file_if_exists("Text", config.text_file_path);
+    test_file_if_exists("Binary", config.binary_file_path);
+    test_file_if_exists("Image", config.image_file_path);
+    test_file_if_exists("PDF", config.pdf_file_path);
+    test_file_if_exists("ZIP", config.zip_file_path);
+    test_file_if_exists("MP4", config.mp4_file_path);
+
+    if (!any_file_tested) {
+        std::cout << "No test files found. Skipping file tests." << std::endl;
     }
 }
 
@@ -563,7 +609,6 @@ void RijndaelTest::test_aes_192_with_polynomial(const TestFileConfig& config, co
         iv[i] = static_cast<std::byte>(i + 0x30);
     }
 
-    // Используем std::function для фабрики алгоритма
     std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algo_func =
             [&poly_config](const std::vector<std::byte>& k) {
                 return create_aes_192_with_polynomial(k, poly_config);
@@ -571,7 +616,6 @@ void RijndaelTest::test_aes_192_with_polynomial(const TestFileConfig& config, co
 
     std::string algo_name = "AES-192-poly" + std::to_string(poly_config.index);
 
-    // Тестируем базовые режимы шифрования
     runner.start_test(algo_name + " Basic Encryption Modes");
     try {
         test_basic_modes_with_function(key, iv, create_algo_func, algo_name);
@@ -595,7 +639,6 @@ void RijndaelTest::test_aes_256_with_polynomial(const TestFileConfig& config, co
         iv[i] = static_cast<std::byte>(i + 0x50);
     }
 
-    // Используем std::function для фабрики алгоритма
     std::function<std::unique_ptr<symmetric_context::SymmetricAlgorithm>(const std::vector<std::byte>&)> create_algo_func =
             [&poly_config](const std::vector<std::byte>& k) {
                 return create_aes_256_with_polynomial(k, poly_config);
@@ -603,7 +646,6 @@ void RijndaelTest::test_aes_256_with_polynomial(const TestFileConfig& config, co
 
     std::string algo_name = "AES-256-poly" + std::to_string(poly_config.index);
 
-    // Тестируем базовые режимы шифрования
     runner.start_test(algo_name + " Basic Encryption Modes");
     try {
         test_basic_modes_with_function(key, iv, create_algo_func, algo_name);
@@ -626,13 +668,11 @@ void RijndaelTest::test_with_different_polynomials(const TestFileConfig& config)
 
     std::cout << "Found " << polynomials.size() << " irreducible polynomial(s) for testing." << std::endl;
 
-    // Тестируем каждый полином
     for (size_t i = 0; i < polynomials.size(); ++i) {
         const auto& poly = polynomials[i];
 
         std::cout << "\n--- Testing with Polynomial #" << i << ": " << poly.name << " ---" << std::endl;
 
-        // Базовый тест с текущим полиномом
         runner.start_test("Basic Test with Polynomial " + poly.name);
         try {
             std::vector<std::byte> test_key(16, std::byte{0x01});
@@ -658,10 +698,8 @@ void RijndaelTest::test_with_different_polynomials(const TestFileConfig& config)
             runner.end_test(false);
         }
 
-        // Расширенное тестирование для каждого полинома
         test_aes_128_with_polynomial(config, poly);
 
-        // Если полиномов немного, можно протестировать и другие размеры ключей
         if (polynomials.size() <= 3) {
             test_aes_192_with_polynomial(config, poly);
             test_aes_256_with_polynomial(config, poly);
@@ -677,19 +715,16 @@ void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
 
     initialize_galois_fields();
 
-    // Показываем доступные полиномы
     print_available_polynomials();
 
-    // Базовый тест с полиномом по умолчанию (AES)
     runner.start_test("Basic Rijndael Algorithm Creation (Default Polynomial)");
     try {
         std::vector<std::byte> test_key(16, std::byte{0x01});
 
-        // Используем полином по умолчанию для AES
         PolynomialConfig default_poly;
         default_poly.polynomial = std::byte{0x1B};
         default_poly.index = 0;
-        default_poly.name = "0x1B (AES default)";
+        default_poly.name = polynomial_to_string(default_poly.polynomial);
 
         auto algo = create_aes_128_with_polynomial(test_key, default_poly);
 
@@ -713,10 +748,8 @@ void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
         return;
     }
 
-    // Тестирование с разными полиномами
     test_with_different_polynomials(config);
 
-    // Тест со случайными ключами и полиномом по умолчанию
     runner.start_test("Random Key/IV Test (Default Polynomial)");
     try {
         std::random_device rd;
@@ -735,7 +768,7 @@ void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
         PolynomialConfig default_poly;
         default_poly.polynomial = std::byte{0x1B};
         default_poly.index = 0;
-        default_poly.name = "0x1B";
+        default_poly.name = polynomial_to_string(default_poly.polynomial);
 
         auto algo = create_aes_128_with_polynomial(random_key, default_poly);
         symmetric_context::SymmetricContext ctx(random_key,
@@ -754,10 +787,6 @@ void RijndaelTest::run_all_rijndael_tests(const TestFileConfig& config) {
         runner.end_test(false);
     }
 }
-
-// ============================================
-// Функции для запуска тестов
-// ============================================
 
 void run_all_rijndael_tests_with_custom_files(
         const std::filesystem::path& text_file,
@@ -812,10 +841,44 @@ void run_rijndael_tests_with_polynomial_selection(
     std::cout << "=== RIJNDAEL/AES TEST SUITE WITH POLYNOMIAL SELECTION ===" << std::endl;
     std::cout << "=========================================================" << std::endl;
 
-    // Показываем доступные полиномы
+    TestFileConfig config;
+    config.set_custom_files(text_file, binary_file, image_file, pdf_file, zip_file, mp4_file);
+
+    std::cout << "\n=== Test Files Information ===" << std::endl;
+    if (config.has_any_files()) {
+        config.print_available_files();
+
+        std::cout << "\nExisting files:" << std::endl;
+        auto check_file = [](const std::string& type, const std::filesystem::path& path) {
+            if (!path.empty()) {
+                if (std::filesystem::exists(path)) {
+                    std::cout << "  ✓ " << type << ": " << path << " ("
+                              << std::filesystem::file_size(path) << " bytes)" << std::endl;
+                    return true;
+                } else {
+                    std::cout << "  ✗ " << type << ": " << path << " (NOT FOUND)" << std::endl;
+                }
+            }
+            return false;
+        };
+
+        bool any_exists = false;
+        any_exists |= check_file("Text", config.text_file_path);
+        any_exists |= check_file("Binary", config.binary_file_path);
+        any_exists |= check_file("Image", config.image_file_path);
+        any_exists |= check_file("PDF", config.pdf_file_path);
+        any_exists |= check_file("ZIP", config.zip_file_path);
+        any_exists |= check_file("MP4", config.mp4_file_path);
+
+        if (!any_exists) {
+            std::cout << "\nWarning: No test files found. File tests will be skipped." << std::endl;
+        }
+    } else {
+        std::cout << "No test files configured." << std::endl;
+    }
+
     print_available_polynomials();
 
-    // Получаем полиномы
     auto polynomials = get_available_polynomials();
 
     if (polynomials.empty()) {
@@ -825,7 +888,6 @@ void run_rijndael_tests_with_polynomial_selection(
         return;
     }
 
-    // Запрашиваем у пользователя выбор полинома
     std::cout << "\n=== Polynomial Selection Menu ===" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "  'all'     - Test all " << polynomials.size() << " polynomials" << std::endl;
@@ -849,9 +911,6 @@ void run_rijndael_tests_with_polynomial_selection(
             continue;
         }
 
-        TestFileConfig config;
-        config.set_custom_files(text_file, binary_file, image_file, pdf_file, zip_file, mp4_file);
-
         TestRunner runner;
         RijndaelTest rijndael_test(runner);
 
@@ -859,7 +918,6 @@ void run_rijndael_tests_with_polynomial_selection(
 
         try {
             if (choice == "all") {
-                // Тестируем все полиномы
                 std::cout << "\nTesting ALL " << polynomials.size() << " irreducible polynomials..." << std::endl;
 
                 int tested_count = 0;
@@ -868,7 +926,6 @@ void run_rijndael_tests_with_polynomial_selection(
                     rijndael_test.test_aes_128_with_polynomial(config, poly);
                     tested_count++;
 
-                    // Можно сделать паузу между тестами для больших наборов
                     if (polynomials.size() > 10 && tested_count % 5 == 0) {
                         std::cout << "\nProgress: " << tested_count << "/" << polynomials.size()
                                   << " polynomials tested." << std::endl;
@@ -876,8 +933,6 @@ void run_rijndael_tests_with_polynomial_selection(
                 }
                 std::cout << "\nCompleted testing all " << tested_count << " polynomials." << std::endl;
             } else if (choice == "default") {
-                // Тестируем только полином по умолчанию (AES)
-                // Находим полином 0x1B в списке
                 PolynomialConfig default_poly;
                 bool found_default = false;
 
@@ -890,14 +945,12 @@ void run_rijndael_tests_with_polynomial_selection(
                 }
 
                 if (!found_default) {
-                    // Если не нашли, используем первый
                     default_poly = polynomials[0];
                 }
 
                 std::cout << "\nTesting with default AES polynomial: " << default_poly.name << std::endl;
                 rijndael_test.test_aes_128_with_polynomial(config, default_poly);
             } else {
-                // Пытаемся преобразовать в индекс
                 try {
                     size_t index = std::stoul(choice);
                     if (index < polynomials.size()) {
@@ -923,7 +976,6 @@ void run_rijndael_tests_with_polynomial_selection(
 
         runner.print_summary();
 
-        // Спрашиваем, хочет ли пользователь продолжить
         std::cout << "\nDo you want to test another polynomial? (yes/no): ";
         std::string continue_choice;
         std::cin >> continue_choice;
@@ -933,8 +985,6 @@ void run_rijndael_tests_with_polynomial_selection(
         }
     }
 }
-
-
 void run_basic_rijndael_tests() {
     std::cout << "=== BASIC RIJNDAEL/AES TESTS (NO FILES) ===" << std::endl;
     std::cout << "=========================================" << std::endl;

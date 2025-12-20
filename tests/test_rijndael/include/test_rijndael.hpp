@@ -6,14 +6,12 @@
 #include "test_utility.hpp"
 #include "rijndael.hpp"
 
-// Структура для конфигурации полинома
 struct PolynomialConfig {
     std::byte polynomial;
     size_t index;
     std::string name;
 };
 
-// Фабричные функции для создания алгоритмов Rijndael с разными полиномами
 std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_rijndael_with_polynomial(
         const std::vector<std::byte>& key,
         size_t block_size,
@@ -31,7 +29,6 @@ std::unique_ptr<symmetric_context::SymmetricAlgorithm> create_aes_256_with_polyn
         const std::vector<std::byte>& key,
         const PolynomialConfig& poly_config);
 
-// Функции для получения доступных полиномов
 std::vector<PolynomialConfig> get_available_polynomials();
 void print_available_polynomials();
 
@@ -41,10 +38,8 @@ public:
 
     void run_all_rijndael_tests(const TestFileConfig& config);
 
-    // Тестирование с разными полиномами
     void test_with_different_polynomials(const TestFileConfig& config);
 
-    // Тестирование конкретных конфигураций с указанным полиномом
     void test_aes_128_with_polynomial(const TestFileConfig& config, const PolynomialConfig& poly_config);
     void test_aes_192_with_polynomial(const TestFileConfig& config, const PolynomialConfig& poly_config);
     void test_aes_256_with_polynomial(const TestFileConfig& config, const PolynomialConfig& poly_config);
@@ -60,7 +55,6 @@ private:
             const std::string& algorithm_name
     );
 
-    // Вспомогательные методы для тестирования с std::function
     void test_basic_modes_with_function(
             const std::vector<std::byte>& key,
             const std::vector<std::byte>& iv,
@@ -82,7 +76,6 @@ private:
     );
 };
 
-// Функции для запуска тестов
 void run_all_rijndael_tests_with_custom_files(
         const std::filesystem::path& text_file = "",
         const std::filesystem::path& binary_file = "",
