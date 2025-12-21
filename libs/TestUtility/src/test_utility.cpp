@@ -130,6 +130,12 @@ void TestFileConfig::print_available_files() const {
 
 namespace test_utils {
     std::filesystem::path setup_test_directory(const std::string& algorithm_name) {
+        if (algorithm_name.find("Serpent") != std::string::npos) {
+            std::filesystem::path base_dir = "tests/test_serpent/results";
+            std::filesystem::create_directories(base_dir);
+            return base_dir;
+        }
+
         if (algorithm_name.find("DEAL") != std::string::npos) {
             std::filesystem::path base_dir = "tests/test_deal/results";
             std::filesystem::create_directories(base_dir);
@@ -140,11 +146,11 @@ namespace test_utils {
             std::filesystem::create_directories(base_dir);
             return base_dir;
         }
+
         std::filesystem::path base_dir = "tests/test_" + algorithm_name + "/results";
         std::filesystem::create_directories(base_dir);
         return base_dir;
     }
-
     bool test_single_file_operation(
             TestRunner& runner,
             const std::string& file_type,
