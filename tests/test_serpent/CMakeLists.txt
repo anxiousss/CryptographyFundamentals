@@ -1,0 +1,3 @@
+add_library(test_serpent SHARED src/test_serpent.cpp)
+target_link_libraries(test_serpent PRIVATE test_utility serpent)
+target_include_directories(test_serpent PUBLIC include)

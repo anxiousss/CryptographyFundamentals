@@ -105,6 +105,54 @@ namespace bits_functions {
         return result;
     }
 
+    uint32_t rotate_left(uint32_t x, int n) {
+        return (x << n) | (x >> (32 - n));
+    }
+
+    uint32_t rotate_right(uint32_t x, int n) {
+        return (x >> n) | (x << (32 - n));
+    }
+
+    std::vector<std::byte> uint32_to_bytes(uint32_t value, bool little_endian) {
+        std::vector<std::byte> result(4);
+
+        if (little_endian) {
+            result[0] = static_cast<std::byte>(value & 0xFF);
+            result[1] = static_cast<std::byte>((value >> 8) & 0xFF);
+            result[2] = static_cast<std::byte>((value >> 16) & 0xFF);
+            result[3] = static_cast<std::byte>((value >> 24) & 0xFF);
+        } else {
+            result[0] = static_cast<std::byte>((value >> 24) & 0xFF);
+            result[1] = static_cast<std::byte>((value >> 16) & 0xFF);
+            result[2] = static_cast<std::byte>((value >> 8) & 0xFF);
+            result[3] = static_cast<std::byte>(value & 0xFF);
+        }
+
+        return result;
+    }
+
+    uint32_t bytes_to_uint32(const std::vector<std::byte>& bytes, bool little_endian) {
+        if (bytes.size() < 4) {
+            throw std::invalid_argument("Vector must contain at least 4 bytes");
+        }
+
+        uint32_t result = 0;
+
+        if (little_endian) {
+            result = static_cast<uint32_t>(bytes[0]) |
+                     (static_cast<uint32_t>(bytes[1]) << 8) |
+                     (static_cast<uint32_t>(bytes[2]) << 16) |
+                     (static_cast<uint32_t>(bytes[3]) << 24);
+        } else {
+            result = (static_cast<uint32_t>(bytes[0]) << 24) |
+                     (static_cast<uint32_t>(bytes[1]) << 16) |
+                     (static_cast<uint32_t>(bytes[2]) << 8) |
+                     static_cast<uint32_t>(bytes[3]);
+        }
+
+        return result;
+    }
+
     std::byte cyclic_shift_left(const std::byte &first, size_t amount) {
         uint8_t value = static_cast<uint8_t>(first);
         amount %= 8;

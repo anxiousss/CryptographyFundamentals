@@ -43,6 +43,14 @@ namespace bits_functions {
 
     std::byte uint16t_to_byte(uint16_t value);
 
+    uint32_t rotate_left(uint32_t x, int n);
+
+    uint32_t rotate_right(uint32_t x, int n);
+
+    std::vector<std::byte> uint32_to_bytes(uint32_t value, bool little_endian = true);
+
+    uint32_t bytes_to_uint32(const std::vector<std::byte>& bytes, bool little_endian = true);
+
     std::vector<std::byte> cyclic_left_row_shift(std::vector<std::byte>& row, size_t amount);
 
     std::vector<std::byte> cyclic_right_row_shift(std::vector<std::byte>& row, size_t amount);
