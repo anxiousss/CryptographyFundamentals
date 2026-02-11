@@ -709,16 +709,21 @@ namespace symmetric_context {
             size_t end_block = start_block + blocks_per_thread + (t < extra_blocks ? 1 : 0);
 
             threads.emplace_back([&, start_block, end_block, block_size, iv]() {
+                auto local_iv = iv;
+                local_iv = bits_functions::add_number_to_bytes(local_iv, start_block);
+
                 for (size_t block_idx = start_block; block_idx < end_block; ++block_idx) {
+                    if (block_idx != start_block) {
+                        local_iv = bits_functions::add_number_to_bytes(local_iv, 1);
+                    }
+
                     size_t i = block_idx * block_size;
                     size_t end_index = std::min(i + block_size, result.size());
                     size_t current_block_size = end_index - i;
 
                     std::vector<std::byte> block(result.begin() + i, result.begin() + end_index);
 
-                    auto counter_value = bits_functions::add_number_to_bytes(iv, block_idx);
-                    auto encrypted_counter = algorithm->encrypt(counter_value);
-
+                    auto encrypted_counter = algorithm->encrypt(local_iv);
                     std::vector<std::byte> keystream_block(encrypted_counter.begin(),
                                                            encrypted_counter.begin() + current_block_size);
                     auto processed_block = bits_functions::xor_vectors(block, keystream_block, current_block_size);

@@ -21,5 +21,4 @@ private:
     void test_multiblock_operations();
 };
 
-// Функция для тестирования файловых операций
 void test_serpent_file_operations(TestRunner& runner, const TestFileConfig& config);

@@ -135,7 +135,7 @@ void SerpentTest::run_all_tests() {
 void SerpentTest::test_key_sizes() {
     runner.start_test("Key Size 128-bit");
     try {
-        std::vector<std::byte> key(16, std::byte{0x01}); // 128 бит
+        std::vector<std::byte> key(16, std::byte{0x01});
         serpent::Serpent cipher(key);
         auto encrypted = cipher.encrypt(plaintext_128);
         runner.assert_true(!encrypted.empty(), "128-bit key should encrypt successfully");
@@ -147,7 +147,7 @@ void SerpentTest::test_key_sizes() {
 
     runner.start_test("Key Size 192-bit");
     try {
-        std::vector<std::byte> key(24, std::byte{0x02}); // 192 бита
+        std::vector<std::byte> key(24, std::byte{0x02});
         serpent::Serpent cipher(key);
         auto encrypted = cipher.encrypt(plaintext_128);
         runner.assert_true(!encrypted.empty(), "192-bit key should encrypt successfully");
@@ -159,7 +159,7 @@ void SerpentTest::test_key_sizes() {
 
     runner.start_test("Key Size 256-bit");
     try {
-        std::vector<std::byte> key(32, std::byte{0x03}); // 256 бит
+        std::vector<std::byte> key(32, std::byte{0x03});
         serpent::Serpent cipher(key);
         auto encrypted = cipher.encrypt(plaintext_128);
         runner.assert_true(!encrypted.empty(), "256-bit key should encrypt successfully");
@@ -233,14 +233,14 @@ void SerpentTest::test_encryption_decryption_consistency() {
             int key_size_choice = i % 3;
             size_t key_size;
             switch (key_size_choice) {
-                case 0: key_size = 16; break; // 128 бит
-                case 1: key_size = 24; break; // 192 бита
-                case 2: key_size = 32; break; // 256 бит
+                case 0: key_size = 16; break;
+                case 1: key_size = 24; break;
+                case 2: key_size = 32; break;
                 default: key_size = 16;
             }
 
             auto random_key = random_bytes(key_size);
-            auto random_plaintext = random_bytes(16); // Блок 128 бит
+            auto random_plaintext = random_bytes(16);
 
             serpent::Serpent cipher(random_key);
             auto encrypted = cipher.encrypt(random_plaintext);
@@ -268,9 +268,9 @@ void SerpentTest::test_different_key_lengths() {
     bool all_passed = true;
 
     std::vector<std::pair<size_t, std::vector<std::byte>>> key_tests = {
-            {16, test_key_128},  // 128 бит
-            {24, test_key_192},  // 192 бита
-            {32, test_key_256}   // 256 бит
+            {16, test_key_128},
+            {24, test_key_192},
+            {32, test_key_256}
     };
 
     for (const auto& [key_len, key] : key_tests) {
@@ -329,8 +329,8 @@ void SerpentTest::test_performance() {
         auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_decrypt - start_encrypt);
 
         double total_bytes = num_blocks * 16.0;
-        double encrypt_speed = (total_bytes * 8.0) / (encrypt_time.count() / 1000.0) / 1024.0 / 1024.0; // Мбит/с
-        double decrypt_speed = (total_bytes * 8.0) / (decrypt_time.count() / 1000.0) / 1024.0 / 1024.0; // Мбит/с
+        double encrypt_speed = (total_bytes * 8.0) / (encrypt_time.count() / 1000.0) / 1024.0 / 1024.0;
+        double decrypt_speed = (total_bytes * 8.0) / (decrypt_time.count() / 1000.0) / 1024.0 / 1024.0;
 
         std::cout << "Performance results:" << std::endl;
         std::cout << "  Blocks processed: " << num_blocks << " (1.6 MB total)" << std::endl;
